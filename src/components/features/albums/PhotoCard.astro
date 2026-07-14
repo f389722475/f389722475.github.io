@@ -1,0 +1,24 @@
+---
+import type { PhotoCardProps } from "./types";
+import { url } from "../../../utils/url-utils";
+
+const { src, alt = "", albumId } = Astro.props as PhotoCardProps;
+const imageUrl = url(src);
+---
+
+<div class="gallery-photo-card break-inside-avoid mb-3">
+	<div
+		data-fancybox={`gallery-${albumId}`}
+		data-src={imageUrl}
+		data-type="image"
+		class="block rounded-xl overflow-hidden group cursor-pointer"
+	>
+		<img
+			src={imageUrl}
+			alt={alt}
+			loading="lazy"
+			decoding="async"
+			class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105"
+		/>
+	</div>
+</div>

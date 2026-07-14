@@ -1,0 +1,10 @@
+{
+	"title": "一些可爱的图片",
+	"hidden": false,
+	"description": "世界很大，你要去看看。",
+	"date": "2025-08-01",
+	"location": "Bilibili",
+	"tags": ["卡哇伊", "可爱", "萌系"],
+	"layout": "masonry",
+	"columns": 3
+}

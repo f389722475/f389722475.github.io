@@ -1,0 +1,252 @@
+---
+import { Icon } from "astro-icon/components";
+
+import { siteConfig } from "../../../config";
+import I18nKey from "../../../i18n/i18nKey";
+import { i18n } from "../../../i18n/translation";
+import {
+	getCategoryList,
+	getSortedPosts,
+	getTagList,
+} from "../../../utils/content-utils";
+import WidgetLayout from "../common/WidgetLayout.astro";
+
+interface Props {
+	class?: string;
+	style?: string;
+}
+
+const { class: className, style } = Astro.props;
+
+// 从配置中获取站点开始日期
+const siteStartDate = siteConfig.siteStartDate || "2025-01-01";
+
+// 获取所有文章
+const posts = await getSortedPosts();
+const categories = await getCategoryList();
+const tags = await getTagList();
+
+// 计算总字数
+let totalWords = 0;
+for (const post of posts) {
+	if (post.body) {
+		let text = post.body;
+
+		// 移除代码块
+		text = text.replace(/```[\s\S]*?```/g, "");
+		// 移除 ` 包裹的行内代码
+		text = text.replace(/`[^`]+`/g, "");
+
+		// 使用与 remark-content.mjs 完全一致的 CJK 正则
+		const cjkPattern =
+			/[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af\u3000-\u303f\uff00-\uffef]/g;
+
+		const cjkMatches = text.match(cjkPattern);
+		const cjkCount = cjkMatches ? cjkMatches.length : 0;
+
+		// 计算非 CJK 单词数
+		const nonCjkText = text.replace(cjkPattern, " ");
+
+		// 按空白字符分割，计算单词数量
+		const nonCjkWords = nonCjkText
+			.split(/\s+/)
+			.filter((word) => word.trim().length > 0);
+
+		totalWords += cjkCount + nonCjkWords.length;
+	}
+}
+
+// 格式化数字（添加千位分隔符）
+function formatNumber(num: number): string {
+	return num.toLocaleString();
+}
+
+// 获取最新文章日期（忽略置顶状态，只按发布日期排序）
+const latestPost = posts.reduce((latest, post) => {
+	if (!latest) {
+		return post;
+	}
+	return post.data.published > latest.data.published ? post : latest;
+}, posts[0]);
+
+const lastPostDate = latestPost
+	? latestPost.data.published.toISOString()
+	: null;
+
+const stats = [
+	{
+		icon: "material-symbols:article-outline",
+		label: i18n(I18nKey.siteStatsPostCount),
+		value: posts.length,
+	},
+	{
+		icon: "material-symbols:folder-outline",
+		label: i18n(I18nKey.siteStatsCategoryCount),
+		value: categories.length,
+	},
+	{
+		icon: "material-symbols:label-outline",
+		label: i18n(I18nKey.siteStatsTagCount),
+		value: tags.length,
+	},
+	{
+		icon: "material-symbols:text-ad-outline-rounded",
+		label: i18n(I18nKey.siteStatsTotalWords),
+		value: totalWords,
+		formatted: true,
+	},
+	{
+		icon: "material-symbols:calendar-clock-outline",
+		label: i18n(I18nKey.siteStatsRunningDays),
+		value: 0, // 将由客户端更新
+		suffix: i18n(I18nKey.siteStatsDays).replace("{days}", ""),
+		dynamic: true,
+		id: "running-days",
+	},
+	{
+		icon: "material-symbols:ecg-heart-outline",
+		label: i18n(I18nKey.siteStatsLastUpdate),
+		value: 0, // 将由客户端更新
+		suffix: i18n(I18nKey.siteStatsDaysAgo).replace("{days}", ""),
+		dynamic: true,
+		id: "last-update",
+	},
+];
+---
+
+<WidgetLayout
+	name={i18n(I18nKey.siteStats)}
+	id="site-stats"
+	class={className}
+	style={style}
+>
+	<div class="flex flex-col gap-1">
+		{
+			stats.map((stat) => (
+				<div class="flex items-center justify-between px-2 py-2">
+					<div class="flex items-center gap-2.5 flex-1 min-w-0">
+						<div class="text-[var(--primary)] text-xl shrink-0">
+							<Icon name={stat.icon} />
+						</div>
+						<span class="text-neutral-700 dark:text-neutral-300 font-medium text-sm break-words leading-tight">
+							{stat.label}
+						</span>
+					</div>
+					<div class="flex items-center ml-3 shrink-0">
+						<span
+							class="text-base font-bold text-neutral-900 dark:text-neutral-100"
+							data-stat-id={stat.id}
+						>
+							{stat.formatted
+								? formatNumber(stat.value)
+								: stat.value}
+						</span>
+						{stat.suffix && (
+							<span class="text-sm text-neutral-500 dark:text-neutral-400 ml-1">
+								{stat.suffix}
+							</span>
+						)}
+					</div>
+				</div>
+			))
+		}
+	</div>
+</WidgetLayout>
+
+<script is:inline define:vars={{ siteStartDate, lastPostDate }}>
+	const DAY_IN_MS = 24 * 60 * 60 * 1000;
+	const SITE_STATS_TIMER_KEY = "__mizukiSiteStatsMidnightTimer";
+
+	function parseLocalDate(dateString) {
+		const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateString);
+		if (dateOnlyMatch) {
+			const [, year, month, day] = dateOnlyMatch;
+			return new Date(Number(year), Number(month) - 1, Number(day));
+		}
+		return new Date(dateString);
+	}
+
+	function getLocalDayNumber(date) {
+		return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+	}
+
+	function updateDynamicStats() {
+		const today = new Date();
+
+		// 按访问者本地自然日计算，避免时区和夏令时造成偏差
+		const startDate = parseLocalDate(siteStartDate);
+		const diffDays = Number.isNaN(startDate.getTime())
+			? 0
+			: Math.max(
+					0,
+					Math.floor(
+						(getLocalDayNumber(today) -
+							getLocalDayNumber(startDate)) /
+							DAY_IN_MS,
+					),
+				);
+
+		const runningDaysElements = document.querySelectorAll(
+			'[data-stat-id="running-days"]',
+		);
+		if (runningDaysElements.length > 0) {
+			runningDaysElements.forEach((element) => {
+				element.textContent = diffDays.toString();
+			});
+		}
+
+		// 更新最后活动时间
+		if (lastPostDate) {
+			const lastPost = parseLocalDate(lastPostDate);
+			const daysSinceLastUpdate = Number.isNaN(lastPost.getTime())
+				? 0
+				: Math.max(
+						0,
+						Math.floor(
+							(getLocalDayNumber(today) -
+								getLocalDayNumber(lastPost)) /
+								DAY_IN_MS,
+						),
+					);
+
+			const lastUpdateElements = document.querySelectorAll(
+				'[data-stat-id="last-update"]',
+			);
+			if (lastUpdateElements.length > 0) {
+				lastUpdateElements.forEach((element) => {
+					element.textContent = daysSinceLastUpdate.toString();
+				});
+			}
+		}
+	}
+
+	function clearDynamicStatsTimer() {
+		if (window[SITE_STATS_TIMER_KEY]) {
+			window.clearTimeout(window[SITE_STATS_TIMER_KEY]);
+			window[SITE_STATS_TIMER_KEY] = undefined;
+		}
+	}
+
+	function scheduleNextMidnightUpdate() {
+		clearDynamicStatsTimer();
+		const now = new Date();
+		const nextMidnight = new Date(
+			now.getFullYear(),
+			now.getMonth(),
+			now.getDate() + 1,
+		);
+
+		window[SITE_STATS_TIMER_KEY] = window.setTimeout(
+			() => {
+				updateDynamicStats();
+				scheduleNextMidnightUpdate();
+			},
+			nextMidnight.getTime() - now.getTime() + 100,
+		);
+	}
+
+	// 页面加载时更新
+	updateDynamicStats();
+	scheduleNextMidnightUpdate();
+	window.addEventListener("pagehide", clearDynamicStatsTimer, { once: true });
+</script>
