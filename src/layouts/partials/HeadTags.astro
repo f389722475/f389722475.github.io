@@ -47,7 +47,7 @@ const favicons: Favicon[] =
 ---
 
 <!-- SEO Meta Tags -->
-<title>{title}</title>
+<title>{siteConfig.browserTitle || title}</title>
 <meta name="description" content={description || title} />
 {
 	keywords && keywords.length > 0 && (

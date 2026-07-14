@@ -26,6 +26,7 @@ const SITE_TIMEZONE = 8; //设置你的网站时区 from -12 to 12 default in UT
 export const siteConfig: SiteConfig = {
 	title: "Mizuki",
 	subtitle: "一个演示网站",
+	browserTitle: "欢迎来到未花~的乐园(〃'▽'〃)",
 	siteURL: "https://mizuki.mysqil.com/", // 请替换为你的站点URL，以斜杠结尾
 	siteStartDate: "2025-01-01", // 站点开始运行日期，用于站点统计组件计算运行天数
 
@@ -368,7 +369,7 @@ export const navBarConfig: NavBarConfig = {
 };
 
 export const profileConfig: ProfileConfig = {
-	avatar: "assets/images/avatar.webp", // 相对于 /src 目录。如果以 '/' 开头，则相对于 /public 目录
+	avatar: "assets/images/mika-portrait.jpg", // 相对于 /src 目录。如果以 '/' 开头，则相对于 /public 目录
 	name: "未花~",
 	bio: "世界很大，你要去看看",
 	typewriter: {

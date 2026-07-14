@@ -10,10 +10,10 @@ import { i18n } from "../../../i18n/translation";
 
 <div class="card-base p-3">
 	<a
-	aria-label="前往关于页面"
+		aria-label="前往关于页面"
 		href={url("/about/")}
 		class="group block relative mx-auto mt-1 lg:mx-0 lg:mt-0 mb-3
-       max-w-[12rem] lg:max-w-none overflow-hidden rounded-xl active:scale-95"
+			aspect-square max-w-[12rem] lg:max-w-none overflow-hidden rounded-xl active:scale-95"
 	>
 		<div
 			class="absolute transition pointer-events-none group-hover:bg-black/30 group-active:bg-black/50
@@ -26,17 +26,31 @@ import { i18n } from "../../../i18n/translation";
 		</div>
 		<Image
 			src={profileConfig.avatar || ""}
-		alt="作者头像"
+			alt="作者头像"
 			class="mx-auto lg:w-full h-full lg:mt-0"
 			loading="eager"
 			fetchpriority="high"
+			widths={[320, 640]}
+			sizes="(max-width: 1023px) 12rem, 18rem"
 		/>
 	</a>
 	<div class="px-2">
 		<div
-			class="font-bold text-xl text-center mb-1 dark:text-neutral-50 transition"
+			class="profile-name-line font-bold text-xl text-center mb-1 dark:text-neutral-50 transition"
 		>
-			{profileConfig.name}
+			<span class="profile-name-text">{profileConfig.name}</span>
+			<span
+				class="admin-badge"
+				title="站点管理员"
+				aria-label="站点管理员"
+			>
+				<Icon
+					name="material-symbols:auto-awesome-rounded"
+					class="admin-badge__spark"
+					aria-hidden="true"
+				/>
+				<span>Admin</span>
+			</span>
 		</div>
 		<div
 			class="h-1 w-5 bg-[var(--primary)] mx-auto rounded-full mb-2 transition"
@@ -168,3 +182,161 @@ import { i18n } from "../../../i18n/translation";
 		}
 	}
 </script>
+
+<style>
+	.profile-name-line {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.42rem;
+		min-width: 0;
+	}
+
+	.profile-name-text {
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.admin-badge {
+		position: relative;
+		isolation: isolate;
+		overflow: hidden;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.22rem;
+		flex: 0 0 auto;
+		padding: 0.25rem 0.48rem 0.26rem 0.34rem;
+		border-radius: 999px;
+		color: #fff;
+		font:
+			800 0.625rem/1 ui-sans-serif,
+			system-ui,
+			sans-serif;
+		letter-spacing: 0.07em;
+		background-color: var(--primary);
+		background-image: linear-gradient(
+			115deg,
+			color-mix(in oklch, var(--primary) 70%, black 30%),
+			oklch(0.5 0.2 300),
+			color-mix(in oklch, var(--primary) 70%, black 30%)
+		);
+		background-size: 240% 100%;
+		box-shadow:
+			0 0 0 1px color-mix(in oklch, var(--primary) 45%, white 55%),
+			0 3px 12px color-mix(in oklch, var(--primary) 42%, transparent);
+		animation:
+			admin-gradient 5s ease-in-out infinite,
+			admin-glow 2.6s ease-in-out infinite;
+	}
+
+	.admin-badge::before {
+		content: "";
+		position: absolute;
+		inset: -55% auto -55% 0;
+		width: 38%;
+		pointer-events: none;
+		background: linear-gradient(
+			90deg,
+			transparent,
+			rgba(255, 255, 255, 0.78),
+			transparent
+		);
+		transform: translateX(-190%) skewX(-18deg);
+		animation: admin-shine 3.4s ease-in-out infinite;
+	}
+
+	.admin-badge > *,
+	.admin-badge__spark {
+		position: relative;
+		z-index: 1;
+	}
+
+	.admin-badge__spark {
+		width: 0.72rem;
+		height: 0.72rem;
+		animation: admin-spark 2.6s ease-in-out infinite;
+	}
+
+	@keyframes admin-gradient {
+		0%,
+		100% {
+			background-position: 0 50%;
+		}
+		50% {
+			background-position: 100% 50%;
+		}
+	}
+
+	@keyframes admin-glow {
+		0%,
+		100% {
+			box-shadow:
+				0 0 0 1px color-mix(in oklch, var(--primary) 45%, white 55%),
+				0 3px 10px color-mix(in oklch, var(--primary) 30%, transparent);
+		}
+		50% {
+			box-shadow:
+				0 0 0 1px color-mix(in oklch, var(--primary) 60%, white 40%),
+				0 4px 16px color-mix(in oklch, var(--primary) 55%, transparent);
+		}
+	}
+
+	@keyframes admin-shine {
+		0%,
+		55% {
+			opacity: 0;
+			transform: translateX(-190%) skewX(-18deg);
+		}
+		65% {
+			opacity: 0.8;
+		}
+		88%,
+		100% {
+			opacity: 0;
+			transform: translateX(430%) skewX(-18deg);
+		}
+	}
+
+	@keyframes admin-spark {
+		0%,
+		100% {
+			transform: rotate(0) scale(1);
+		}
+		50% {
+			transform: rotate(18deg) scale(1.18);
+		}
+	}
+
+	@media (max-width: 22rem) {
+		.profile-name-line {
+			gap: 0.3rem;
+		}
+
+		.admin-badge {
+			font-size: 0.56rem;
+			padding-inline: 0.3rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.admin-badge,
+		.admin-badge::before,
+		.admin-badge__spark {
+			animation: none;
+		}
+
+		.admin-badge::before {
+			display: none;
+		}
+	}
+
+	@media (prefers-contrast: more) {
+		.admin-badge {
+			outline: 2px solid var(--primary);
+			outline-offset: 2px;
+			box-shadow: none;
+		}
+	}
+</style>

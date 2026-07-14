@@ -6,6 +6,7 @@ import { h } from "hastscript";
  *
  * @param {Object} properties - The properties of the component.
  * @param {string} properties.repo - The GitHub repository in the format "owner/repo".
+ * @param {string} [properties.href] - An optional GitHub URL opened by the card.
  * @param {import('mdast').RootContent[]} children - The children elements of the component.
  * @returns {import('mdast').Parent} The created GitHub Card component.
  */
@@ -25,6 +26,13 @@ export function GithubCardComponent(properties, children) {
 	}
 
 	const repo = properties.repo;
+	const requestedHref =
+		typeof properties.href === "string" ? properties.href.trim() : "";
+	const cardHref = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/?$/.test(
+		requestedHref,
+	)
+		? requestedHref
+		: `https://github.com/${repo}`;
 	const cardUuid = `GC${Math.random().toString(36).slice(-6)}`; // Collisions are not important
 
 	const nAvatar = h(`div#${cardUuid}-avatar`, { class: "gc-avatar" });
@@ -87,7 +95,7 @@ export function GithubCardComponent(properties, children) {
 		`a#${cardUuid}-card`,
 		{
 			class: "card-github fetch-waiting no-styling",
-			href: `https://github.com/${repo}`,
+			href: cardHref,
 			target: "_blank",
 			repo,
 		},
