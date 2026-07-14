@@ -23,31 +23,7 @@ const getLevelText = (level: string) => {
 	}
 };
 
-const getLevelWidth = (level: string) => {
-	switch (level) {
-		case "expert":
-			return "100%";
-		case "advanced":
-			return "80%";
-		case "intermediate":
-			return "60%";
-		case "beginner":
-			return "40%";
-		default:
-			return "20%";
-	}
-};
-
-const formatExperience = (exp: { years: number; months: number }) => {
-	const parts: string[] = [];
-	if (exp.years > 0) {
-		parts.push(`${exp.years} ${i18n(I18nKey.skillYears)}`);
-	}
-	if (exp.months > 0) {
-		parts.push(`${exp.months} ${i18n(I18nKey.skillMonths)}`);
-	}
-	return parts.join(" ");
-};
+const progress = Math.min(100, Math.max(0, skill.progress));
 ---
 
 <div
@@ -82,9 +58,6 @@ const formatExperience = (exp: { years: number; months: number }) => {
 						{getLevelText(skill.level)}
 					</span>
 				</div>
-				<p class="text-xs text-black/50 dark:text-white/50">
-					{formatExperience(skill.experience)}
-				</p>
 			</div>
 		</div>
 
@@ -94,10 +67,17 @@ const formatExperience = (exp: { years: number; months: number }) => {
 			{skill.description}
 		</p>
 
-		<div class="mt-3 w-full bg-[var(--btn-regular-bg)] rounded-full h-1.5">
+		<div
+			class="mt-3 w-full bg-[var(--btn-regular-bg)] rounded-full h-1.5 overflow-hidden"
+			role="progressbar"
+			aria-label={`${skill.name} 熟练度`}
+			aria-valuemin="0"
+			aria-valuemax="100"
+			aria-valuenow={progress}
+		>
 			<div
 				class="h-1.5 rounded-full transition-all duration-500"
-				style={`width: ${getLevelWidth(skill.level)}; background-color: ${skillColor}`}
+				style={`width: ${progress}%; background-color: ${skillColor}`}
 			>
 			</div>
 		</div>

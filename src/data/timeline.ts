@@ -70,31 +70,6 @@ export const timelineData: TimelineItem[] = [
 		color: "#F59E0B",
 	},
 	{
-		id: "aurora-blog",
-		title: "AuroraBlog - 极简个人技术博客",
-		description:
-			"基于静态站点生成器从零搭建个人博客，支持 Markdown 自动渲染、标签分类与暗黑模式切换。",
-		type: "project",
-		organization: "个人项目",
-		position: "独立开发",
-		skills: [
-			"Astro",
-			"React",
-			"Tailwind CSS",
-			"Vercel",
-			"Markdown",
-			"GitHub Actions",
-		],
-		achievements: [
-			"实现 Markdown 自动渲染、标签分类与暗黑模式切换",
-			"优化首屏加载速度，LCP < 1.2s",
-			"配置 GitHub Actions，实现自动化部署",
-		],
-		icon: "material-symbols:code",
-		color: "#7C3AED",
-		featured: true,
-	},
-	{
 		id: "taskflow",
 		title: "TaskFlow - 轻量级任务看板系统",
 		description:
