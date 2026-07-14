@@ -28,7 +28,8 @@ export const siteConfig: SiteConfig = {
 	subtitle: "一个演示网站",
 	browserTitle: "欢迎来到未花~的乐园(〃'▽'〃)",
 	siteURL: "https://mizuki.mysqil.com/", // 请替换为你的站点URL，以斜杠结尾
-	siteStartDate: "2025-01-01", // 站点开始运行日期，用于站点统计组件计算运行天数
+	siteStartDate: "2026-07-14", // 站点开始运行日期，用于站点统计组件计算运行天数
+	siteLastActivityDate: "2026-07-14", // 站点最后活动日期，作为文章更新日期的最新基准
 
 	timeZone: SITE_TIMEZONE,
 
@@ -371,7 +372,7 @@ export const navBarConfig: NavBarConfig = {
 export const profileConfig: ProfileConfig = {
 	avatar: "assets/images/mika-portrait.jpg", // 相对于 /src 目录。如果以 '/' 开头，则相对于 /public 目录
 	name: "未花~",
-	bio: "世界很大，你要去看看",
+	bio: "每一天都要充满希望哦~",
 	typewriter: {
 		enable: true, // 启用个人简介打字机效果
 		speed: 80, // 打字速度（毫秒）
@@ -641,7 +642,7 @@ export const sidebarLayoutConfig: SidebarLayoutConfig = {
 };
 
 export const sakuraConfig: SakuraConfig = {
-	enable: false, // 默认关闭樱花特效
+	enable: true, // 默认开启樱花特效
 	sakuraNum: 21, // 樱花数量
 	limitTimes: -1, // 樱花越界限制次数，-1为无限循环
 	size: {
@@ -664,7 +665,7 @@ export const sakuraConfig: SakuraConfig = {
 		rotation: 0.03, // 旋转速度
 		fadeSpeed: 0.03, // 消失速度，不应大于最小不透明度
 	},
-	zIndex: 100, // 层级，确保樱花在合适的层级显示
+	zIndex: 20, // 位于背景图（10）之上、主内容卡片（30）之下
 };
 
 // Pio 看板娘配置

@@ -69,9 +69,16 @@ const latestPost = posts.reduce((latest, post) => {
 	return post.data.published > latest.data.published ? post : latest;
 }, posts[0]);
 
-const lastPostDate = latestPost
-	? latestPost.data.published.toISOString()
+const latestPostDate = latestPost?.data.published ?? null;
+const configuredLastActivityDate = siteConfig.siteLastActivityDate
+	? new Date(siteConfig.siteLastActivityDate)
 	: null;
+const lastActivityDate =
+	configuredLastActivityDate &&
+	!Number.isNaN(configuredLastActivityDate.getTime()) &&
+	(!latestPostDate || configuredLastActivityDate > latestPostDate)
+		? siteConfig.siteLastActivityDate
+		: (latestPostDate?.toISOString() ?? null);
 
 const stats = [
 	{
@@ -153,7 +160,7 @@ const stats = [
 	</div>
 </WidgetLayout>
 
-<script is:inline define:vars={{ siteStartDate, lastPostDate }}>
+<script is:inline define:vars={{ siteStartDate, lastActivityDate }}>
 	const DAY_IN_MS = 24 * 60 * 60 * 1000;
 	const SITE_STATS_TIMER_KEY = "__mizukiSiteStatsMidnightTimer";
 
@@ -183,7 +190,7 @@ const stats = [
 						(getLocalDayNumber(today) -
 							getLocalDayNumber(startDate)) /
 							DAY_IN_MS,
-					),
+					) + 1,
 				);
 
 		const runningDaysElements = document.querySelectorAll(
@@ -196,17 +203,17 @@ const stats = [
 		}
 
 		// 更新最后活动时间
-		if (lastPostDate) {
-			const lastPost = parseLocalDate(lastPostDate);
-			const daysSinceLastUpdate = Number.isNaN(lastPost.getTime())
+		if (lastActivityDate) {
+			const lastActivity = parseLocalDate(lastActivityDate);
+			const daysSinceLastUpdate = Number.isNaN(lastActivity.getTime())
 				? 0
 				: Math.max(
 						0,
 						Math.floor(
 							(getLocalDayNumber(today) -
-								getLocalDayNumber(lastPost)) /
+								getLocalDayNumber(lastActivity)) /
 								DAY_IN_MS,
-						),
+						) + 1,
 					);
 
 			const lastUpdateElements = document.querySelectorAll(

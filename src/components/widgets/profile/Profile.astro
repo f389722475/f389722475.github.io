@@ -36,9 +36,11 @@ import { i18n } from "../../../i18n/translation";
 	</a>
 	<div class="px-2">
 		<div
-			class="profile-name-line font-bold text-xl text-center mb-1 dark:text-neutral-50 transition"
+			class="profile-name-line font-bold text-xl text-center mb-4 dark:text-neutral-50 transition"
 		>
-			<span class="profile-name-text">{profileConfig.name}</span>
+			<span class="profile-name-anchor">
+				<span class="profile-name-text">{profileConfig.name}</span>
+			</span>
 			<span
 				class="admin-badge"
 				title="站点管理员"
@@ -52,11 +54,6 @@ import { i18n } from "../../../i18n/translation";
 				<span>Admin</span>
 			</span>
 		</div>
-		<div
-			class="h-1 w-5 bg-[var(--primary)] mx-auto rounded-full mb-2 transition"
-		>
-		</div>
-
 		<div class="text-center text-neutral-400 mb-2.5 transition">
 			{
 				profileConfig.typewriter?.enable ? (
@@ -197,6 +194,23 @@ import { i18n } from "../../../i18n/translation";
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+	}
+
+	.profile-name-anchor {
+		position: relative;
+		display: inline-flex;
+		min-width: 0;
+	}
+
+	.profile-name-anchor::after {
+		content: "";
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: -0.5rem;
+		height: 0.25rem;
+		border-radius: 9999px;
+		background: var(--primary);
 	}
 
 	.admin-badge {
