@@ -38,8 +38,24 @@ import { i18n } from "../../../i18n/translation";
 		<div
 			class="profile-name-line font-bold text-xl text-center mb-4 dark:text-neutral-50 transition"
 		>
-			<span class="profile-name-anchor">
+			<span class="profile-name-crystal">
+				<Icon
+					name="material-symbols:ac-unit-rounded"
+					class="profile-name-crystal__flake profile-name-crystal__flake--left"
+					aria-hidden="true"
+				/>
 				<span class="profile-name-text">{profileConfig.name}</span>
+				<Icon
+					name="material-symbols:ac-unit-rounded"
+					class="profile-name-crystal__flake profile-name-crystal__flake--right"
+					aria-hidden="true"
+				/>
+				<span
+					class="profile-name-crystal__shard profile-name-crystal__shard--top"
+					aria-hidden="true"></span>
+				<span
+					class="profile-name-crystal__shard profile-name-crystal__shard--bottom"
+					aria-hidden="true"></span>
 			</span>
 			<span
 				class="admin-badge"
@@ -190,27 +206,213 @@ import { i18n } from "../../../i18n/translation";
 	}
 
 	.profile-name-text {
+		position: relative;
+		z-index: 1;
 		min-width: 0;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
+		color: #0b5f8a;
+		font-weight: 900;
+		letter-spacing: 0.025em;
+		text-shadow:
+			0 1px 0 rgba(255, 255, 255, 0.9),
+			0 0 0.2rem rgba(34, 211, 238, 0.5),
+			0 0 0.65rem rgba(56, 189, 248, 0.42);
+		filter: drop-shadow(0 0.12rem 0.12rem rgba(14, 116, 144, 0.2));
 	}
 
-	.profile-name-anchor {
+	:global(.dark) .profile-name-text {
+		color: #cffafe;
+		text-shadow:
+			0 0 0.22rem rgba(165, 243, 252, 0.72),
+			0 0 0.72rem rgba(56, 189, 248, 0.62);
+	}
+
+	.profile-name-crystal {
 		position: relative;
+		isolation: isolate;
 		display: inline-flex;
+		align-items: center;
 		min-width: 0;
 	}
 
-	.profile-name-anchor::after {
+	.profile-name-crystal::before {
 		content: "";
 		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: -0.5rem;
-		height: 0.25rem;
-		border-radius: 9999px;
-		background: var(--primary);
+		z-index: -1;
+		inset: 18% -10% 4%;
+		border-radius: 999px;
+		pointer-events: none;
+		background: radial-gradient(
+			ellipse,
+			rgba(103, 232, 249, 0.62) 0%,
+			rgba(59, 130, 246, 0.3) 46%,
+			transparent 76%
+		);
+		filter: blur(0.5rem);
+		animation: ice-aura 2.8s ease-in-out infinite;
+	}
+
+	@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+		.profile-name-text {
+			background-image: linear-gradient(
+				108deg,
+				#083e68 0%,
+				#089fd9 19%,
+				#c9f7ff 38%,
+				#45d7ff 50%,
+				#697cff 72%,
+				#0b4f7b 100%
+			);
+			background-size: 280% 100%;
+			background-clip: text;
+			-webkit-background-clip: text;
+			color: transparent;
+			-webkit-text-fill-color: transparent;
+			animation:
+				ice-name-shimmer 4.6s linear infinite,
+				ice-name-glow 2.8s ease-in-out infinite;
+		}
+
+		:global(.dark) .profile-name-text {
+			background-image: linear-gradient(
+				108deg,
+				#8be9ff 0%,
+				#eefeff 26%,
+				#55d8ff 45%,
+				#b5c7ff 66%,
+				#7de9ff 100%
+			);
+			text-shadow:
+				0 0 0.22rem rgba(165, 243, 252, 0.72),
+				0 0 0.72rem rgba(56, 189, 248, 0.62);
+		}
+	}
+
+	.profile-name-crystal__flake,
+	.profile-name-crystal__shard {
+		position: absolute;
+		z-index: 2;
+		pointer-events: none;
+	}
+
+	.profile-name-crystal__flake {
+		color: #67e8f9;
+		filter: drop-shadow(0 0 0.16rem rgba(255, 255, 255, 0.95))
+			drop-shadow(0 0 0.35rem rgba(14, 165, 233, 0.85));
+	}
+
+	.profile-name-crystal__flake--left {
+		top: -0.34rem;
+		left: -0.48rem;
+		width: 0.62rem;
+		height: 0.62rem;
+		animation: ice-flake-left 5.2s linear infinite;
+	}
+
+	.profile-name-crystal__flake--right {
+		right: -0.18rem;
+		bottom: -0.34rem;
+		width: 0.46rem;
+		height: 0.46rem;
+		color: #a5f3fc;
+		animation: ice-flake-right 3.2s ease-in-out infinite;
+	}
+
+	.profile-name-crystal__shard {
+		width: 0.19rem;
+		height: 0.19rem;
+		border-radius: 0.04rem;
+		background: #ecfeff;
+		box-shadow:
+			0 0 0.22rem rgba(255, 255, 255, 0.95),
+			0 0 0.45rem rgba(34, 211, 238, 0.9);
+		transform: rotate(45deg);
+		animation: ice-shard-twinkle 2.4s ease-in-out infinite;
+	}
+
+	.profile-name-crystal__shard--top {
+		top: -0.26rem;
+		left: 38%;
+	}
+
+	.profile-name-crystal__shard--bottom {
+		right: 24%;
+		bottom: -0.29rem;
+		width: 0.14rem;
+		height: 0.14rem;
+		animation-delay: -1.2s;
+	}
+
+	@keyframes ice-name-shimmer {
+		0% {
+			background-position: 180% 50%;
+		}
+		100% {
+			background-position: -80% 50%;
+		}
+	}
+
+	@keyframes ice-name-glow {
+		0%,
+		100% {
+			filter: drop-shadow(0 0.12rem 0.12rem rgba(14, 116, 144, 0.18));
+		}
+		50% {
+			filter: drop-shadow(0 0 0.42rem rgba(34, 211, 238, 0.72));
+		}
+	}
+
+	@keyframes ice-aura {
+		0%,
+		100% {
+			opacity: 0.42;
+			transform: scale(0.94);
+		}
+		50% {
+			opacity: 0.86;
+			transform: scale(1.08);
+		}
+	}
+
+	@keyframes ice-flake-left {
+		0% {
+			opacity: 0.48;
+			transform: rotate(0deg) scale(0.82);
+		}
+		50% {
+			opacity: 1;
+			transform: rotate(180deg) scale(1.14);
+		}
+		100% {
+			opacity: 0.48;
+			transform: rotate(360deg) scale(0.82);
+		}
+	}
+
+	@keyframes ice-flake-right {
+		0%,
+		100% {
+			opacity: 0.5;
+			transform: translateY(0) rotate(-12deg) scale(0.82);
+		}
+		50% {
+			opacity: 1;
+			transform: translateY(-0.13rem) rotate(12deg) scale(1.18);
+		}
+	}
+
+	@keyframes ice-shard-twinkle {
+		0%,
+		100% {
+			opacity: 0.28;
+			transform: rotate(45deg) scale(0.72);
+		}
+		50% {
+			opacity: 1;
+			transform: rotate(225deg) scale(1.18);
+		}
 	}
 
 	.admin-badge {
@@ -328,6 +530,18 @@ import { i18n } from "../../../i18n/translation";
 			gap: 0.3rem;
 		}
 
+		.profile-name-crystal__flake--left {
+			left: -0.36rem;
+			width: 0.52rem;
+			height: 0.52rem;
+		}
+
+		.profile-name-crystal__flake--right {
+			right: -0.12rem;
+			width: 0.4rem;
+			height: 0.4rem;
+		}
+
 		.admin-badge {
 			font-size: 0.56rem;
 			padding-inline: 0.3rem;
@@ -335,6 +549,10 @@ import { i18n } from "../../../i18n/translation";
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.profile-name-text,
+		.profile-name-crystal::before,
+		.profile-name-crystal__flake,
+		.profile-name-crystal__shard,
 		.admin-badge,
 		.admin-badge::before,
 		.admin-badge__spark {
@@ -347,6 +565,20 @@ import { i18n } from "../../../i18n/translation";
 	}
 
 	@media (prefers-contrast: more) {
+		.profile-name-text {
+			color: CanvasText;
+			background: none;
+			-webkit-text-fill-color: CanvasText;
+			text-shadow: none;
+			filter: none;
+		}
+
+		.profile-name-crystal::before,
+		.profile-name-crystal__flake,
+		.profile-name-crystal__shard {
+			display: none;
+		}
+
 		.admin-badge {
 			outline: 2px solid var(--primary);
 			outline-offset: 2px;
