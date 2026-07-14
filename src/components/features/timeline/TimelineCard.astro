@@ -5,8 +5,6 @@ import type { TimelineCardProps } from "./types";
 
 const { item } = Astro.props as TimelineCardProps;
 
-const isCurrent = !item.endDate;
-
 const getTypeIcon = (type: string) => {
 	switch (type) {
 		case "education":
@@ -50,43 +48,13 @@ const getLinkIcon = (type: string) => {
 	}
 };
 
-const formatDate = (dateString: string) => {
-	const date = new Date(dateString);
-	return date.toLocaleDateString("zh-CN", {
-		year: "numeric",
-		month: "short",
-	});
-};
-
-const getDuration = (startDate: string, endDate?: string) => {
-	const start = new Date(startDate);
-	const end = endDate ? new Date(endDate) : new Date();
-	const diffTime = Math.abs(end.getTime() - start.getTime());
-	const diffMonths = Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30));
-
-	if (diffMonths < 12) {
-		return `${diffMonths} ${i18n(I18nKey.timelineMonths)}`;
-	}
-	const years = Math.floor(diffMonths / 12);
-	const months = diffMonths % 12;
-	if (months === 0) {
-		return `${years} ${i18n(I18nKey.timelineYears)}`;
-	}
-	return `${years} ${i18n(I18nKey.timelineYears)} ${months} ${i18n(I18nKey.timelineMonths)}`;
-};
-
 const icon = item.icon || getTypeIcon(item.type);
 const typeText = getTypeText(item.type);
-const dateRange = `${formatDate(item.startDate)} - ${item.endDate ? formatDate(item.endDate) : i18n(I18nKey.timelinePresent)}`;
-const duration = getDuration(item.startDate, item.endDate);
-const nodeColor = isCurrent ? "#22c55e" : item.color || "var(--primary)";
+const nodeColor = item.color || "var(--primary)";
 const hasLinks = item.links && item.links.length > 0;
 ---
 
-<div
-	class:list={["timeline-entry", { "is-current": isCurrent }]}
-	data-type={item.type}
->
+<div class="timeline-entry" data-type={item.type}>
 	<div class="timeline-node" style={`background-color: ${nodeColor};`}>
 		<iconify-icon icon={icon} width="10" height="10" style="color: white;"
 		></iconify-icon>
@@ -137,13 +105,6 @@ const hasLinks = item.links && item.links.length > 0;
 				</div>
 
 				<div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
-					{
-						isCurrent && (
-							<span class="px-2 py-0.5 text-xs rounded-md bg-green-500/10 text-green-600 dark:text-green-400 font-medium">
-								{i18n(I18nKey.timelineCurrent)}
-							</span>
-						)
-					}
 					<span
 						class="px-2 py-0.5 text-xs rounded-md bg-[var(--primary)]/10 text-[var(--primary)] font-medium"
 					>
@@ -193,25 +154,9 @@ const hasLinks = item.links && item.links.length > 0;
 				)
 			}
 
-			<div
-				class="flex items-center gap-4 text-xs text-black/50 dark:text-white/50 mb-1 pt-3 border-t border-black/5 dark:border-white/5"
-			>
-				<span class="flex items-center gap-1">
-					<iconify-icon
-						icon="material-symbols:calendar-month-outline"
-						width="14"
-						height="14"></iconify-icon>
-					{dateRange}
-				</span>
-				<span class="flex items-center gap-1">
-					<iconify-icon
-						icon="material-symbols:schedule-outline"
-						width="14"
-						height="14"></iconify-icon>
-					{duration}
-				</span>
-				{
-					item.location && (
+			{
+				item.location && (
+					<div class="flex items-center gap-4 text-xs text-black/50 dark:text-white/50 mb-1 pt-3 border-t border-black/5 dark:border-white/5">
 						<span class="flex items-center gap-1">
 							<iconify-icon
 								icon="material-symbols:location-on-outline"
@@ -220,9 +165,9 @@ const hasLinks = item.links && item.links.length > 0;
 							/>
 							{item.location}
 						</span>
-					)
-				}
-			</div>
+					</div>
+				)
+			}
 
 			{
 				hasLinks && (
@@ -294,22 +239,6 @@ const hasLinks = item.links && item.links.length > 0;
 		box-shadow:
 			0 0 0 2px var(--primary),
 			0 0 12px rgba(0, 0, 0, 0.1);
-	}
-
-	.timeline-entry.is-current .timeline-node {
-		animation: pulse 2s ease-in-out infinite;
-	}
-
-	@keyframes pulse {
-		0%,
-		100% {
-			box-shadow: 0 0 0 2px var(--line-divider);
-		}
-		50% {
-			box-shadow:
-				0 0 0 2px #22c55e,
-				0 0 8px rgba(34, 197, 94, 0.3);
-		}
 	}
 
 	@keyframes fadeInUp {

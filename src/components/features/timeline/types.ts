@@ -9,7 +9,7 @@ export interface TimelineItem {
 	title: string;
 	description: string;
 	type: "education" | "work" | "project" | "achievement";
-	startDate: string;
+	startDate?: string;
 	endDate?: string;
 	location?: string;
 	organization?: string;
