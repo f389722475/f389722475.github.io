@@ -27,7 +27,7 @@ export const siteConfig: SiteConfig = {
 	title: "Mizuki",
 	subtitle: "一个演示网站",
 	browserTitle: "欢迎来到未花~的乐园(〃'▽'〃)",
-	siteURL: "https://mizuki.mysqil.com/", // 请替换为你的站点URL，以斜杠结尾
+	siteURL: "https://f389722475.github.io/", // 站点URL，以斜杠结尾
 	siteStartDate: "2026-07-14", // 站点开始运行日期，用于站点统计组件计算运行天数
 	siteLastActivityDate: "2026-07-14", // 站点最后活动日期，作为文章更新日期的最新基准
 
@@ -47,7 +47,7 @@ export const siteConfig: SiteConfig = {
 		friends: true, // 友链页面开关
 		projects: true, // 项目页面开关
 		skills: true, // 技能页面开关
-		timeline: true, // 时间线页面开关
+		timeline: false, // 时间线页面开关
 		albums: true, // 相册页面开关
 		devices: true, // 设备页面开关
 	},
@@ -358,11 +358,6 @@ export const navBarConfig: NavBarConfig = {
 					name: "Skills",
 					url: "/skills/",
 					icon: "material-symbols:psychology",
-				},
-				{
-					name: "Timeline",
-					url: "/timeline/",
-					icon: "material-symbols:timeline",
 				},
 			],
 		},

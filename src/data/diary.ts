@@ -1,5 +1,7 @@
 // 日记数据配置
-// 用于管理日记页面的数据
+// 用于管理日记页面的数据，并作为 Supabase 内容同步的单一数据源。
+
+import diarySource from "./diary.json";
 
 export interface DiaryItem {
 	id: number;
@@ -11,15 +13,7 @@ export interface DiaryItem {
 	tags?: string[];
 }
 
-// 示例日记数据
-const diaryData: DiaryItem[] = [
-	{
-		id: 1,
-		content: "樱花飘落的速度是每秒五厘米！",
-		date: "2025-01-15T10:30:00Z",
-		images: ["/images/diary/sakura.jpg", "/images/diary/1.webp"],
-	},
-];
+const diaryData: DiaryItem[] = diarySource;
 
 // 获取日记列表（按时间倒序）
 export const getDiaryList = (limit?: number) => {

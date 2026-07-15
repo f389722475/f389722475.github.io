@@ -1,7 +1,7 @@
 ---
 import path from "node:path";
 
-import Comment from "@components/comment/index.astro";
+import ArticleEngagement from "@components/features/posts/ArticleEngagement.svelte";
 import {
 	LastModified,
 	PostMeta,
@@ -166,6 +166,9 @@ if (profileConfig.avatar) {
 
 // 判断是否为加密文章
 const isEncrypted = !!(entry.data.encrypted && entry.data.password);
+const engagementPostKey = removeFileExtension(entry.id);
+const engagementPath = Astro.url.pathname;
+const engagementUrl = Astro.url.toString();
 
 const jsonLd = {
 	"@context": "https://schema.org",
@@ -345,8 +348,14 @@ const jsonLd = {
 		</div>
 	</div>
 
-	<!-- 评论 -->
-	<Comment post={entry} />
+	<ArticleEngagement
+		client:load
+		postKey={engagementPostKey}
+		title={entry.data.title}
+		canonicalPath={engagementPath}
+		canonicalUrl={engagementUrl}
+		commentsEnabled={entry.data.comment ?? true}
+	/>
 
 	{
 		siteConfig.showLastModified && (

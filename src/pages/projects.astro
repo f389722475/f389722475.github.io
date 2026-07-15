@@ -88,9 +88,13 @@ const subtitle = i18n(I18nKey.projectsSubtitle);
 		<div class="card-base z-10 px-6 sm:px-9 py-6 relative w-full">
 			<PageHeader title={title} subtitle={subtitle} />
 
-			<div class="mb-8">
-				<FilterTabs tabs={filterTabs} dataAttr="category" />
-			</div>
+			{
+				categories.length > 1 && (
+					<div class="mb-8">
+						<FilterTabs tabs={filterTabs} dataAttr="category" />
+					</div>
+				)
+			}
 
 			<div
 				id="projects-grid"

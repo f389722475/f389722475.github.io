@@ -74,3 +74,5 @@ jobs:
         run: pnpm astro build
         env:
           ENABLE_CONTENT_SYNC: false
+          PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}

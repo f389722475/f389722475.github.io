@@ -53,6 +53,15 @@ jobs:
                   SITE_URL: ${{ vars.SITE_URL }}
                   BASE_PATH: ${{ vars.BASE_PATH }}
                   BILI_SESSDATA: ${{ secrets.BILI_SESSDATA }}
+                  PUBLIC_SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+                  PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+            - name: Sync articles and media to Supabase
+              if: ${{ vars.SUPABASE_BACKEND_READY == 'true' }}
+              run: pnpm run supabase:sync-content
+              env:
+                  SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+                  SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
 
             - name: Upload GitHub Pages artifact
               uses: actions/upload-pages-artifact@v4

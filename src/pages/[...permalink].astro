@@ -7,7 +7,7 @@
  * 例如：permalink: "custom-page" => /custom-page/
  */
 import Image from "@components/atoms/Image/Image.astro";
-import Comment from "@components/comment/index.astro";
+import ArticleEngagement from "@components/features/posts/ArticleEngagement.svelte";
 import PasswordProtection from "@components/features/auth/PasswordProtection.astro";
 import {
 	LastModified,
@@ -25,7 +25,7 @@ import {
 	hasCustomPermalink,
 	initPostIdMap,
 } from "@utils/permalink-utils";
-import { getFileDirFromPath } from "@utils/url-utils";
+import { getFileDirFromPath, removeFileExtension } from "@utils/url-utils";
 import type { CollectionEntry } from "astro:content";
 import { render } from "astro:content";
 import { Icon } from "astro-icon/components";
@@ -82,6 +82,9 @@ const { remarkPluginFrontmatter } = await render(entry);
 // 处理加密逻辑
 let encryptedContent = "";
 const isEncrypted = entry.data.encrypted && entry.data.password;
+const engagementPostKey = removeFileExtension(entry.id);
+const engagementPath = Astro.url.pathname;
+const engagementUrl = Astro.url.toString();
 
 if (isEncrypted) {
 	const contentToEncrypt = "MIZUKI-VERIFY:" + entry.body;
@@ -254,8 +257,14 @@ const jsonLd = {
 		</div>
 	</div>
 
-	<!-- 评论 -->
-	<Comment post={entry} />
+	<ArticleEngagement
+		client:load
+		postKey={engagementPostKey}
+		title={entry.data.title}
+		canonicalPath={engagementPath}
+		canonicalUrl={engagementUrl}
+		commentsEnabled={entry.data.comment ?? true}
+	/>
 
 	{
 		siteConfig.showLastModified && (

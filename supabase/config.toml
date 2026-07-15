@@ -1,0 +1,4 @@
+project_id = "mizuki-blog"
+
+[functions.blog-api]
+verify_jwt = false
