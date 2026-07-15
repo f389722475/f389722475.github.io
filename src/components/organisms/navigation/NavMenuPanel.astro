@@ -6,6 +6,7 @@ import I18nKey from "../../../i18n/i18nKey";
 import { i18n } from "../../../i18n/translation";
 import type { LinkPreset, NavBarLink } from "../../../types/config";
 import { url } from "../../../utils/url-utils";
+import AdminNavLink from "./AdminNavLink.svelte";
 import type { NavMenuPanelProps, ProcessedNavBarLink } from "./types";
 
 const navTitleMap: Record<string, string> = {
@@ -33,19 +34,17 @@ const getLocalizedName = (name: string): string => {
 
 const processedLinks: ProcessedNavBarLink[] = (
 	Astro.props as NavMenuPanelProps
-).links.map(
-	(link: NavBarLink): ProcessedNavBarLink => ({
-		...link,
-		children: link.children?.map(
-			(child: NavBarLink | LinkPreset): ProcessedNavBarLink => {
-				if (typeof child === "number") {
-					return LinkPresets[child] as ProcessedNavBarLink;
-				}
-				return child as ProcessedNavBarLink;
-			},
-		),
-	}),
-);
+).links.map((link: NavBarLink): ProcessedNavBarLink => ({
+	...link,
+	children: link.children?.map(
+		(child: NavBarLink | LinkPreset): ProcessedNavBarLink => {
+			if (typeof child === "number") {
+				return LinkPresets[child] as ProcessedNavBarLink;
+			}
+			return child as ProcessedNavBarLink;
+		},
+	),
+}));
 ---
 
 <div
@@ -144,6 +143,7 @@ const processedLinks: ProcessedNavBarLink[] = (
 			</div>
 		))
 	}
+	<AdminNavLink client:only="svelte" href={url("/admin/")} variant="mobile" />
 </div>
 
 <style>

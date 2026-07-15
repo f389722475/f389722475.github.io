@@ -44,6 +44,7 @@
 		"@fontsource-variable/jetbrains-mono": "^5.2.8",
 		"@fontsource/roboto": "^5.2.10",
 		"@iconify/svelte": "^5.2.1",
+		"@supabase/supabase-js": "2.95.0",
 		"@swup/astro": "^1.8.0",
 		"@tailwindcss/typography": "^0.5.15",
 		"@tailwindcss/vite": "^4.0.0",

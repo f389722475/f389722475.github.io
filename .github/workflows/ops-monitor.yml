@@ -1,0 +1,48 @@
+name: Blog Ops Monitor
+
+on:
+    schedule:
+        - cron: "*/10 * * * *"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: blog-ops-monitor
+    cancel-in-progress: true
+
+jobs:
+    probe:
+        name: Collect health sample
+        if: ${{ vars.SUPABASE_BACKEND_READY == 'true' }}
+        runs-on: ubuntu-latest
+        timeout-minutes: 3
+        steps:
+            - name: Probe website, Edge API and Supabase
+              env:
+                  SUPABASE_URL: ${{ vars.PUBLIC_SUPABASE_URL }}
+                  SUPABASE_PUBLISHABLE_KEY: ${{ vars.PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+                  OPS_MONITOR_TOKEN: ${{ secrets.OPS_MONITOR_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  test -n "$SUPABASE_URL"
+                  test -n "$SUPABASE_PUBLISHABLE_KEY"
+                  test -n "$OPS_MONITOR_TOKEN"
+
+                  response="$(curl --fail --silent --show-error \
+                    --retry 2 \
+                    --retry-all-errors \
+                    --max-time 45 \
+                    -X POST "$SUPABASE_URL/functions/v1/blog-admin-api" \
+                    -H "apikey: $SUPABASE_PUBLISHABLE_KEY" \
+                    -H "x-monitor-token: $OPS_MONITOR_TOKEN" \
+                    -H "Content-Type: application/json" \
+                    --data '{"action":"probe"}')"
+
+                  RESPONSE="$response" node -e '
+                    const body = JSON.parse(process.env.RESPONSE || "{}");
+                    if (body.ok !== true) process.exit(1);
+                    const data = body.data || {};
+                    console.log(`Health sample stored: ${data.sampledAt || "unknown"}`);
+                  '

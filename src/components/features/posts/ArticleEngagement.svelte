@@ -452,7 +452,7 @@
 			<span>{liking ? "同步中" : liked ? "已点赞" : "点赞"}</span>
 		</button>
 		<div class="metric-item">
-			<Icon icon="material-symbols:share-outline-rounded" />
+			<Icon icon="material-symbols:ios-share-rounded" />
 			<strong>{formatMetric(metrics.shares)}</strong>
 			<span>分享</span>
 		</div>

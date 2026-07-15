@@ -149,7 +149,11 @@ export default defineConfig({
 		svelte({
 			preprocess: vitePreprocess(),
 		}),
-		sitemap(),
+		sitemap({
+			// 管理页是静态鉴权外壳，不应进入公开站点地图。
+			filter: (page) =>
+				!new URL(page).pathname.replace(/\/+$/, "").endsWith("/admin"),
+		}),
 	],
 	markdown: {
 		remarkPlugins: [

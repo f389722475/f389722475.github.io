@@ -1,4 +1,36 @@
 project_id = "mizuki-blog"
 
+[auth]
+site_url = "https://f389722475.github.io"
+additional_redirect_urls = [
+	"https://f389722475.github.io/admin/",
+	"http://localhost:4321/admin/",
+	"http://127.0.0.1:4321/admin/",
+]
+# 站长账号已通过 GitHub OAuth 建立；关闭新用户注册，仅允许已有账号登录。
+enable_signup = false
+enable_anonymous_sign_ins = false
+enable_manual_linking = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+secure_password_change = false
+max_frequency = "1m"
+otp_length = 8
+otp_expiry = 3600
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[storage.vector]
+# 免费方案不启用 Vector Buckets，避免 config push 误触付费能力。
+enabled = false
+
 [functions.blog-api]
+verify_jwt = false
+
+[functions.blog-admin-api]
 verify_jwt = false

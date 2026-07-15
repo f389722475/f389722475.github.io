@@ -20,9 +20,14 @@ is committed here.
   - public-read `blog-media` Storage bucket with admin-only browser writes
 - `functions/blog-api/index.ts`
   - one CORS-restricted endpoint for reads and anonymous interactions
+- `migrations/202607150002_admin_dashboard.sql`
+  - private moderation audit trail and 30-day service health samples
+  - atomic comment moderation and a least-privilege dashboard RPC
+- `functions/blog-admin-api/index.ts`
+  - GitHub-identity-gated moderation, operations dashboard, and health probes
+  - allow-listed Supabase Metrics API fields only; raw metrics never reach the browser
 - `config.toml`
-  - deploys `blog-api` with JWT verification disabled because the public site has
-    no user login; all write authorization is performed inside the function
+  - both functions perform explicit authorization internally
 
 ## Security model
 
@@ -50,11 +55,16 @@ Public roles can read only:
 Comments are always inserted as `pending`. Likes, events, moderation, and draft
 content are inaccessible to anonymous clients.
 
-Storage uploads from a browser additionally require an authenticated user with
-`app_metadata.role = "admin"`. Until an admin login is added, upload through the
-Supabase Dashboard or trusted server tooling. SVG uploads are accepted for the
-existing content pipeline, but they must come from a trusted administrator and
-be sanitized before upload because SVG is an active document format.
+Storage writes are restricted to trusted service-role tooling. The administrator
+browser never receives a server secret and does not receive a direct Storage
+write policy. SVG uploads are accepted for the existing trusted content
+pipeline, but they must be sanitized because SVG is an active document format.
+
+The private administrator UI uses Supabase GitHub OAuth. Every admin request is
+validated again by `auth.getUser()` inside `blog-admin-api`, then matched against
+the immutable GitHub numeric provider ID in `ADMIN_GITHUB_IDS`. A hidden navbar
+item is only a presentation detail; this server-side provider-ID check is the
+actual authorization boundary.
 
 ## Deploy
 
@@ -66,6 +76,7 @@ supabase login
 supabase link --project-ref <PROJECT_REF>
 supabase db push
 supabase functions deploy blog-api --no-verify-jwt
+supabase functions deploy blog-admin-api --no-verify-jwt
 ```
 
 Hosted Edge Functions provide `SUPABASE_URL` and server-side key variables. The
@@ -79,7 +90,15 @@ long, random, independently rotatable HMAC secret:
 ```powershell
 supabase secrets set ALLOWED_ORIGINS="https://f389722475.github.io,http://localhost:4321"
 supabase secrets set VISITOR_HASH_SECRET="<LONG_RANDOM_VALUE>"
+supabase secrets set ADMIN_GITHUB_IDS="<IMMUTABLE_GITHUB_NUMERIC_ID>"
+supabase secrets set OPS_MONITOR_TOKEN="<INDEPENDENT_LONG_RANDOM_VALUE>"
+supabase secrets set SITE_URL="https://f389722475.github.io"
 ```
+
+Store the same monitor token as the masked GitHub repository secret
+`OPS_MONITOR_TOKEN`. `.github/workflows/ops-monitor.yml` calls the protected
+probe every ten minutes, providing real 24-hour availability and P95 latency
+samples for GitHub Pages, the public Edge API, and PostgreSQL.
 
 Optional comment CAPTCHA:
 
@@ -204,6 +223,7 @@ The endpoint accepts both compact action names and frontend-compatible aliases:
 
 | Canonical | Alias | Required fields | Result |
 | --- | --- | --- | --- |
+| `health` | `health_check` | none | fixed healthy status after a read-only database query; no row data or configuration |
 | `summary` | `get_post`, `metrics` | `postKey`; optional `visitorId` | content summary, metrics, liked state, approved comments |
 | `view` | `record_view` | `postKey`, `visitorId`; optional `sessionId` | deduplicated view and current metrics |
 | `like` | `toggle_like` | `postKey`, `visitorId` | toggled `liked` state and metrics |
@@ -239,7 +259,45 @@ Comment fields are trimmed and length-limited. URLs must use HTTP or HTTPS. If
 `turnstileToken`. Rendering clients must still treat comment bodies as plain text
 or sanitize any Markdown output; raw HTML is not trusted.
 
-## Moderation and maintenance
+## Administrator moderation and operations
+
+The static `/admin/` page starts GitHub OAuth and remains data-empty until the
+authenticated Supabase session passes the server-side numeric GitHub ID check.
+Configure the GitHub OAuth App callback as
+`https://<PROJECT_REF>.supabase.co/auth/v1/callback`, set the Supabase Auth Site
+URL to the production origin, and allow the exact `/admin/` production and local
+redirect URLs. After the owner completes the first OAuth login, disable new-user
+signup; the server-side GitHub ID allowlist remains mandatory either way.
+It provides:
+
+- pending/approved/rejected/spam comment queues
+- approve, reject, spam, and audited delete actions
+- content and engagement totals
+- real HTTP round-trip latency, PostgreSQL query latency, availability, and P95
+- allow-listed memory, `/data` disk, database connection, load, and CPU-delta
+  metrics from the privileged Supabase Metrics API
+
+The browser cannot perform ICMP ping, so the UI deliberately labels these
+values as HTTP RTT or query latency. Missing metrics render as `暂无`; the
+dashboard never invents resource utilization values.
+
+### Operations design references
+
+The console adapts information-architecture patterns rather than copying source
+code: Beszel's overview-first resource cards and history, Uptime Kuma's
+status/latency/uptime/P95 model, Checkmate's incident-oriented status grouping,
+and Supabase's privileged Metrics/Grafana allow-list approach. The resulting
+implementation remains native to this Astro + Supabase project and keeps
+missing, stale, or insufficient samples explicit.
+
+- <https://github.com/henrygd/beszel>
+- <https://github.com/louislam/uptime-kuma>
+- <https://github.com/bluewave-labs/Checkmate>
+- <https://supabase.com/docs/guides/telemetry/metrics>
+- <https://github.com/supabase/supabase-grafana>
+
+The authenticated dashboard is the preferred moderation path. Emergency SQL
+moderation remains possible:
 
 Approve a reviewed comment through the Dashboard or trusted SQL:
 

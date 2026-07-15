@@ -5,6 +5,7 @@ import {
 
 type JsonObject = Record<string, unknown>;
 type CanonicalAction =
+	| "health"
 	| "summary"
 	| "view"
 	| "like"
@@ -62,6 +63,8 @@ const COMMENT_FIELDS: string =
 	"id,content_id,parent_id,author_name,author_website,body,status,created_at,updated_at";
 
 const ACTION_ALIASES: Record<string, CanonicalAction> = {
+	health: "health",
+	health_check: "health",
 	summary: "summary",
 	metrics: "summary",
 	get_post: "summary",
@@ -753,6 +756,28 @@ async function summaryAction(body: JsonObject): Promise<JsonObject> {
 	};
 }
 
+async function healthAction(): Promise<JsonObject> {
+	// This intentionally performs a real, read-only PostgreSQL request through
+	// the same service client used by the public interaction actions.  Returning
+	// only a fixed status proves the Edge dispatch and database dependency are
+	// available without exposing row contents, counts, configuration, or timing.
+	const { error } = await getSupabase()
+		.from("content_entries")
+		.select("id")
+		.limit(1);
+	if (error) {
+		console.warn(
+			`[blog-api] health query failed (${error.code ?? "unknown"})`,
+		);
+		throw new ApiError(
+			503,
+			"DATABASE_UNAVAILABLE",
+			"Blog service is temporarily unavailable.",
+		);
+	}
+	return { status: "ok", database: "reachable" };
+}
+
 async function commentsAction(body: JsonObject): Promise<JsonObject> {
 	const content = await resolvePublishedContent(requirePostKey(body));
 	const limit = boundedInteger(firstValue(body, "limit"), 100, 1, 100);
@@ -1086,6 +1111,8 @@ async function dispatch(
 ): Promise<{ data: JsonObject; status?: number }> {
 	const action = normalizeAction(body.action);
 	switch (action) {
+		case "health":
+			return { data: await healthAction() };
 		case "summary":
 			return { data: await summaryAction(body) };
 		case "comments":

@@ -21,6 +21,7 @@ interface Props {
 	// SEO
 	title: string;
 	description?: string;
+	noIndex?: boolean;
 
 	// Open Graph
 	ogImageUrl?: string;
@@ -36,6 +37,7 @@ const {
 	ogImageUrl,
 	setOGTypeArticle = false,
 	configHue,
+	noIndex = false,
 } = Astro.props;
 
 // 关键词
@@ -49,6 +51,7 @@ const favicons: Favicon[] =
 <!-- SEO Meta Tags -->
 <title>{siteConfig.browserTitle || title}</title>
 <meta name="description" content={description || title} />
+{noIndex && <meta name="robots" content="noindex, nofollow, noarchive" />}
 {
 	keywords && keywords.length > 0 && (
 		<meta name="keywords" content={keywords.join(", ")} />

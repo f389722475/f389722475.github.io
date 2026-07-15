@@ -1,0 +1,12 @@
+---
+import AdminConsole from "@components/features/admin/AdminConsole.svelte";
+import MainGridLayout from "@layouts/MainGridLayout.astro";
+---
+
+<MainGridLayout
+	title="管理员后台"
+	description="评论审核、站点运维与 Supabase 运行状态"
+	noIndex={true}
+>
+	<AdminConsole client:only="svelte" />
+</MainGridLayout>

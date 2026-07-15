@@ -33,6 +33,7 @@ interface Props {
 	setOGTypeArticle?: boolean;
 	postSlug?: string;
 	headings?: MarkdownHeading[];
+	noIndex?: boolean;
 }
 
 // 获取 banner 图片
@@ -52,6 +53,7 @@ const {
 	setOGTypeArticle,
 	postSlug,
 	headings = [],
+	noIndex = false,
 } = Astro.props;
 const hasBannerCredit = siteConfig.banner.credit.enable;
 const hasBannerLink = !!siteConfig.banner.credit.url;
@@ -102,6 +104,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 	lang={lang}
 	setOGTypeArticle={setOGTypeArticle}
 	postSlug={postSlug}
+	noIndex={noIndex}
 >
 	<GridScripts
 		navbarTransparentMode={siteConfig.banner?.navbar?.transparentMode ||

@@ -10,6 +10,7 @@ import ThemeSwitch from "../../control/ThemeSwitch.svelte"
 import DisplaySettings from "../../features/settings/DisplaySettings.svelte"
 import WallpaperSwitch from "../../features/settings/WallpaperSwitch.svelte"
 import MobileTOC from "../../features/toc/MobileTOC.svelte"
+import AdminNavLink from "./AdminNavLink.svelte"
 import DropdownMenu from "./DropdownMenu.astro"
 import NavMenuPanel from "./NavMenuPanel.astro"
 import Search from "./Search.svelte"
@@ -90,6 +91,11 @@ const iconWebpSrc = hasIconPngFallback ? iconSrc.replace(/\.png$/i, ".webp") : i
             {links.map((l) => {
                 return <DropdownMenu link={l} />;
             })}
+			<AdminNavLink
+				client:only="svelte"
+				href={url("/admin/")}
+				variant="desktop"
+			/>
         </div>
         <div class="flex items-center gap-1">
             <div id="search-container">
