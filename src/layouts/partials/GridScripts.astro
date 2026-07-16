@@ -126,10 +126,108 @@ const {
 		});
 	})();
 
+	function getWallpaperMode() {
+		return localStorage.getItem("wallpaperMode") || defaultWallpaperMode;
+	}
+
+	function setupBannerVideo(video) {
+		if (video.dataset.playbackBound === "true") {
+			return;
+		}
+
+		video.dataset.playbackBound = "true";
+
+		const parsedStart = Number.parseFloat(video.dataset.loopStart || "0");
+		const parsedEnd = Number.parseFloat(video.dataset.loopEnd || "");
+		const loopStart = Number.isFinite(parsedStart)
+			? Math.max(0, parsedStart)
+			: 0;
+		const loopEnd =
+			Number.isFinite(parsedEnd) && parsedEnd > loopStart
+				? parsedEnd
+				: null;
+
+		const rewind = function () {
+			try {
+				video.currentTime = loopStart;
+			} catch {
+				// 元数据尚未可用时由 loadedmetadata 再次校准
+			}
+		};
+
+		video.addEventListener("loadedmetadata", function () {
+			if (
+				video.currentTime < loopStart ||
+				(loopEnd !== null && video.currentTime >= loopEnd)
+			) {
+				rewind();
+			}
+		});
+
+		if (loopEnd !== null) {
+			video.addEventListener("timeupdate", function () {
+				if (video.currentTime >= loopEnd) {
+					rewind();
+					syncBannerVideo(getWallpaperMode());
+				}
+			});
+		}
+
+		video.addEventListener("ended", function () {
+			rewind();
+			syncBannerVideo(getWallpaperMode());
+		});
+	}
+
+	function syncBannerVideo(wallpaperMode) {
+		const video = document.querySelector("[data-banner-video]");
+		if (!(video instanceof HTMLVideoElement)) {
+			return;
+		}
+
+		setupBannerVideo(video);
+
+		const bannerWrapper = document.getElementById("banner-wrapper");
+		const hiddenOnMobile =
+			window.matchMedia("(max-width: 1279px)").matches &&
+			bannerWrapper?.classList.contains("mobile-hide-banner");
+		const reduceMotion = window.matchMedia(
+			"(prefers-reduced-motion: reduce)",
+		).matches;
+		const shouldPlay =
+			wallpaperMode === "banner" &&
+			!document.hidden &&
+			!hiddenOnMobile &&
+			!reduceMotion;
+
+		if (!shouldPlay) {
+			video.pause();
+			return;
+		}
+
+		if (video.dataset.videoLoaded !== "true") {
+			const source = video.dataset.videoSrc;
+			if (!source) {
+				return;
+			}
+
+			video.dataset.videoLoaded = "true";
+			video.muted = true;
+			video.src = source;
+			video.load();
+		}
+
+		const playPromise = video.play();
+		if (playPromise) {
+			playPromise.catch(function () {
+				// 自动播放被浏览器策略阻止时保留 poster，不打断页面交互
+			});
+		}
+	}
+
 	// 根据壁纸模式动态设置 banner 和全屏壁纸的显示
 	function applyWallpaperMode() {
-		const wallpaperMode =
-			localStorage.getItem("wallpaperMode") || defaultWallpaperMode;
+		const wallpaperMode = getWallpaperMode();
 		const bannerWrapper = document.getElementById("banner-wrapper");
 		const fullscreenWallpaper = document.querySelector(
 			"[data-fullscreen-wallpaper]",
@@ -261,6 +359,8 @@ const {
 				forceReflow();
 				break;
 		}
+
+		syncBannerVideo(wallpaperMode);
 	}
 
 	// 监听壁纸模式变化，立即应用（不重载页面）
@@ -274,6 +374,25 @@ const {
 	} else {
 		applyWallpaperMode();
 	}
+
+	document.addEventListener("visibilitychange", function () {
+		syncBannerVideo(getWallpaperMode());
+	});
+
+	let bannerVideoResizeTimer = null;
+	window.addEventListener("resize", function () {
+		clearTimeout(bannerVideoResizeTimer);
+		bannerVideoResizeTimer = setTimeout(function () {
+			syncBannerVideo(getWallpaperMode());
+		}, 120);
+	});
+
+	const reducedMotionQuery = window.matchMedia(
+		"(prefers-reduced-motion: reduce)",
+	);
+	reducedMotionQuery.addEventListener?.("change", function () {
+		syncBannerVideo(getWallpaperMode());
+	});
 
 	// 支持 Swup 页面过渡 - 在内容替换之前就应用布局，避免闪烁
 	function setupSwupLayoutSync() {
@@ -377,6 +496,10 @@ const {
 	// 支持 Swup 页面过渡
 	document.addEventListener("swup:page:view", function () {
 		applyWallpaperMode();
+		setTimeout(function () {
+			// 移动端首页的 banner 隐藏类会延迟约 80ms 切换
+			syncBannerVideo(getWallpaperMode());
+		}, 120);
 
 		// 在Swup页面切换时也要重新应用布局模式
 		requestAnimationFrame(function () {

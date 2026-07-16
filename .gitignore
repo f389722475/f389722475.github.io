@@ -26,6 +26,9 @@ supabase/.temp/
 # Large zip files
 *.zip
 
+# Local source media (publish only derived assets from public/assets)
+/!!素材包/
+
 # macOS-specific files
 .DS_Store
 

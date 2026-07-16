@@ -148,6 +148,14 @@ export interface SiteConfig {
 					desktop?: string | string[];
 					mobile?: string | string[];
 			  }; // 支持单个图片、图片数组或分别设置桌面端和移动端图片
+		video?: {
+			enable: boolean; // 是否用视频替代横幅图片
+			src: string; // 视频文件路径
+			poster?: string; // 视频加载前及减少动态效果时显示的海报
+			preload?: "none" | "metadata" | "auto"; // 浏览器预加载策略
+			loopStart?: number; // 循环起点（秒）
+			loopEnd?: number; // 循环终点（秒）
+		};
 		position?: "top" | "center" | "bottom";
 		carousel?: {
 			enable: boolean; // 是否启用轮播

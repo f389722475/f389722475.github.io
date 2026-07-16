@@ -124,26 +124,21 @@ export const siteConfig: SiteConfig = {
 	},
 
 	banner: {
-		// 支持单张图片或图片数组，当数组长度 > 1 时自动启用轮播
-		src: {
-			desktop: [
-				"/assets/desktop-banner/1.webp",
-				"/assets/desktop-banner/2.webp",
-				"/assets/desktop-banner/3.webp",
-				"/assets/desktop-banner/4.webp",
-			], // 桌面横幅图片
-			mobile: [
-				"/assets/mobile-banner/1.webp",
-				"/assets/mobile-banner/2.webp",
-				"/assets/mobile-banner/3.webp",
-				"/assets/mobile-banner/4.webp",
-			], // 移动横幅图片
-		}, // 使用本地横幅图片
+		// 视频海报也作为静态回退，兼容减少动态效果与自动播放受限的环境
+		src: "/assets/banner/blue-archive-7th-pv-poster.webp",
+		video: {
+			enable: true,
+			src: "/assets/banner/blue-archive-7th-pv.mp4",
+			poster: "/assets/banner/blue-archive-7th-pv-poster.webp",
+			preload: "none",
+			loopStart: 0,
+			loopEnd: 83, // 发布版已裁掉片头与纯白片尾，在结尾前平滑回绕
+		},
 
 		position: "center", // 等同于 object-position，仅支持 'top', 'center', 'bottom'。默认为 'center'
 
 		carousel: {
-			enable: true, // 为 true 时：为多张图片启用轮播。为 false 时：从数组中随机显示一张图片
+			enable: false, // 视频横幅不启用图片轮播
 			interval: 3, // 轮播间隔时间（秒）
 		},
 
@@ -247,18 +242,22 @@ export const siteConfig: SiteConfig = {
 export const fullscreenWallpaperConfig: FullscreenWallpaperConfig = {
 	src: {
 		desktop: [
-			"/assets/desktop-banner/1.webp",
-			"/assets/desktop-banner/2.webp",
-			"/assets/desktop-banner/3.webp",
-			"/assets/desktop-banner/4.webp",
-		], // 桌面横幅图片
+			"/assets/fullscreen-wallpaper/1.webp",
+			"/assets/fullscreen-wallpaper/2.webp",
+			"/assets/fullscreen-wallpaper/3.webp",
+			"/assets/fullscreen-wallpaper/4.webp",
+			"/assets/fullscreen-wallpaper/5.webp",
+			"/assets/fullscreen-wallpaper/6.webp",
+		], // 桌面全屏壁纸
 		mobile: [
-			"/assets/mobile-banner/1.webp",
-			"/assets/mobile-banner/2.webp",
-			"/assets/mobile-banner/3.webp",
-			"/assets/mobile-banner/4.webp",
-		], // 移动横幅图片
-	}, // 使用本地横幅图片
+			"/assets/fullscreen-wallpaper/1.webp",
+			"/assets/fullscreen-wallpaper/2.webp",
+			"/assets/fullscreen-wallpaper/3.webp",
+			"/assets/fullscreen-wallpaper/4.webp",
+			"/assets/fullscreen-wallpaper/5.webp",
+			"/assets/fullscreen-wallpaper/6.webp",
+		], // 移动端复用同一组壁纸并由 object-cover 自适应裁切
+	},
 	position: "center", // 壁纸位置，等同于 object-position
 	carousel: {
 		enable: true, // 启用轮播
