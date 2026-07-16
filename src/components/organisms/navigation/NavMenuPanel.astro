@@ -143,7 +143,7 @@ const processedLinks: ProcessedNavBarLink[] = (
 			</div>
 		))
 	}
-	<AdminNavLink client:only="svelte" href={url("/admin/")} variant="mobile" />
+	<AdminNavLink client:load href={url("/admin/")} variant="mobile" />
 </div>
 
 <style>

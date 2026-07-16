@@ -674,6 +674,7 @@
 				</button>
 				<p class="auth-hint">
 					不会申请仓库写入权限；后端会再次核验不可变 GitHub 身份。
+					<br />可将本页加入收藏夹，浏览器重启后仍可从这里重新登录。
 				</p>
 			{:else if authState === "denied"}
 				<div class="auth-alert denied" role="alert">

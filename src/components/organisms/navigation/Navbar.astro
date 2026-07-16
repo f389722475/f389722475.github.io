@@ -92,7 +92,7 @@ const iconWebpSrc = hasIconPngFallback ? iconSrc.replace(/\.png$/i, ".webp") : i
                 return <DropdownMenu link={l} />;
             })}
 			<AdminNavLink
-				client:only="svelte"
+				client:load
 				href={url("/admin/")}
 				variant="desktop"
 			/>
