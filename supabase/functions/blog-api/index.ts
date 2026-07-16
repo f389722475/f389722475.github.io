@@ -57,10 +57,12 @@ const UUID_PATTERN =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_TOKEN_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 const CONTENT_SUMMARY_FIELDS: string =
-	"id,post_key,kind,canonical_path,title,summary,cover_object_path,tags,category,comment_enabled,published_at,created_at,updated_at";
-const CONTENT_FULL_FIELDS: string = `${CONTENT_SUMMARY_FIELDS},body_markdown,metadata`;
+	"id,post_key,kind,canonical_path,title,summary,cover_object_path,tags,category,comment_enabled,published_at,created_at,updated_at,metadata";
+const CONTENT_FULL_FIELDS: string = `${CONTENT_SUMMARY_FIELDS},body_markdown`;
 const COMMENT_FIELDS: string =
 	"id,content_id,parent_id,author_name,author_website,body,status,created_at,updated_at";
+const CONTENT_LIST_BATCH_SIZE = 1000;
+const CONTENT_LIST_SCAN_LIMIT = 10_000;
 
 const ACTION_ALIASES: Record<string, CanonicalAction> = {
 	health: "health",
@@ -578,7 +580,15 @@ async function resolvePublishedContent(
 			"Published content was not found.",
 		);
 	}
-	return data as unknown as ContentRow;
+	const content = data as unknown as ContentRow;
+	if (content.metadata?.trashed === true) {
+		throw new ApiError(
+			404,
+			"CONTENT_NOT_FOUND",
+			"Published content was not found.",
+		);
+	}
+	return content;
 }
 
 function numericCount(value: number | string | null | undefined): number {
@@ -693,6 +703,12 @@ async function getApprovedComments(
 }
 
 function publicContent(row: ContentRow, includeBody = false): JsonObject {
+	const pinned = row.metadata?.pinned === true;
+	const priority =
+		typeof row.metadata?.priority === "number" &&
+		Number.isFinite(row.metadata.priority)
+			? row.metadata.priority
+			: null;
 	const result: JsonObject = {
 		id: row.id,
 		postKey: row.post_key,
@@ -706,6 +722,8 @@ function publicContent(row: ContentRow, includeBody = false): JsonObject {
 		cover_object_path: row.cover_object_path,
 		tags: row.tags,
 		category: row.category,
+		pinned,
+		priority,
 		commentEnabled: row.comment_enabled,
 		comment_enabled: row.comment_enabled,
 		publishedAt: row.published_at,
@@ -721,6 +739,39 @@ function publicContent(row: ContentRow, includeBody = false): JsonObject {
 		result.metadata = row.metadata ?? {};
 	}
 	return result;
+}
+
+function comparePublicContent(left: ContentRow, right: ContentRow): number {
+	const leftPinned = left.metadata?.pinned === true;
+	const rightPinned = right.metadata?.pinned === true;
+	if (leftPinned !== rightPinned) {
+		return leftPinned ? -1 : 1;
+	}
+
+	if (leftPinned && rightPinned) {
+		const leftPriority =
+			typeof left.metadata?.priority === "number" &&
+			Number.isFinite(left.metadata.priority)
+				? left.metadata.priority
+				: null;
+		const rightPriority =
+			typeof right.metadata?.priority === "number" &&
+			Number.isFinite(right.metadata.priority)
+				? right.metadata.priority
+				: null;
+		if (leftPriority !== rightPriority) {
+			if (leftPriority === null) return 1;
+			if (rightPriority === null) return -1;
+			return leftPriority - rightPriority;
+		}
+	}
+
+	const publishedDifference =
+		new Date(right.published_at).getTime() -
+		new Date(left.published_at).getTime();
+	return (
+		publishedDifference || left.post_key.localeCompare(right.post_key, "en")
+	);
 }
 
 function firstRpcRow(data: unknown): JsonObject {
@@ -1053,31 +1104,64 @@ async function contentListAction(body: JsonObject): Promise<JsonObject> {
 		);
 	}
 
-	let query = getSupabase()
-		.from("content_entries")
-		.select(CONTENT_SUMMARY_FIELDS, { count: "exact" })
-		.eq("status", "published")
-		.lte("published_at", new Date().toISOString())
-		.order("published_at", { ascending: false })
-		.range(offset, offset + limit - 1);
-	if (kind) query = query.eq("kind", kind);
-
-	const { data, error, count } = await query;
-	if (error) {
-		console.warn(
-			`[blog-api] content list failed (${error.code ?? "unknown"})`,
+	const rows: ContentRow[] = [];
+	const now = new Date().toISOString();
+	for (
+		let start = 0;
+		start < CONTENT_LIST_SCAN_LIMIT;
+		start += CONTENT_LIST_BATCH_SIZE
+	) {
+		const end = Math.min(
+			start + CONTENT_LIST_BATCH_SIZE - 1,
+			CONTENT_LIST_SCAN_LIMIT - 1,
 		);
+		let query = getSupabase()
+			.from("content_entries")
+			.select(CONTENT_SUMMARY_FIELDS)
+			.eq("status", "published")
+			.lte("published_at", now)
+			.order("published_at", { ascending: false })
+			.range(start, end);
+		if (kind) query = query.eq("kind", kind);
+
+		const { data, error } = await query;
+		if (error) {
+			console.warn(
+				`[blog-api] content list failed (${error.code ?? "unknown"})`,
+			);
+			throw new ApiError(
+				503,
+				"DATABASE_UNAVAILABLE",
+				"Content is temporarily unavailable.",
+			);
+		}
+		const batch = (data ?? []) as unknown as ContentRow[];
+		rows.push(...batch);
+		if (batch.length < end - start + 1) {
+			break;
+		}
+	}
+	if (rows.length >= CONTENT_LIST_SCAN_LIMIT) {
+		console.warn("[blog-api] public content scan limit reached");
 		throw new ApiError(
 			503,
-			"DATABASE_UNAVAILABLE",
+			"CONTENT_LIST_LIMIT_REACHED",
 			"Content is temporarily unavailable.",
 		);
 	}
+
+	const visibleRows = rows
+		.filter(
+			(item) =>
+				item.metadata?.hidden !== true &&
+				item.metadata?.trashed !== true,
+		)
+		.sort(comparePublicContent);
 	return {
-		items: ((data ?? []) as unknown as ContentRow[]).map((item) =>
-			publicContent(item),
-		),
-		pagination: { limit, offset, total: count ?? 0 },
+		items: visibleRows
+			.slice(offset, offset + limit)
+			.map((item) => publicContent(item)),
+		pagination: { limit, offset, total: visibleRows.length },
 	};
 }
 

@@ -6,7 +6,7 @@ const publishableKey = import.meta.env.PUBLIC_SUPABASE_PUBLISHABLE_KEY?.trim();
 const adminApiUrl = supabaseUrl
 	? `${supabaseUrl}/functions/v1/blog-admin-api`
 	: "";
-const REQUEST_TIMEOUT_MS = 20_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 export const isAdminApiConfigured = Boolean(adminApiUrl && publishableKey);
 
@@ -103,6 +103,102 @@ export type AdminCommentsResponse = AdminCommentsResult;
 export type AdminAuditItem = AdminAuditEntry;
 export type AdminAuditResponse = AdminAuditLogResult;
 export type AdminModerationDecision = AdminCommentDecision;
+
+export type AdminContentPostStatus =
+	"published" | "draft" | "scheduled" | "trash";
+export type AdminContentPostKind = "article" | "diary";
+
+export interface AdminContentPost {
+	id: string;
+	sha?: string;
+	trashPath?: string;
+	trashedAt?: string;
+	title: string;
+	slug: string;
+	description: string;
+	body: string;
+	image: string;
+	tags: string[];
+	category: string;
+	kind: AdminContentPostKind;
+	status: AdminContentPostStatus;
+	hidden: boolean;
+	pinned: boolean;
+	priority: number | null;
+	comment: boolean;
+	encrypted: boolean;
+	password: string;
+	passwordHint: string;
+	publishedAt: string;
+	updatedAt: string;
+	author: string;
+	lang: string;
+	alias: string;
+	permalink: string;
+	sourceLink: string;
+	licenseName: string;
+	licenseUrl: string;
+}
+
+export interface AdminContentRevision {
+	headSha: string;
+	branch: string;
+	repository: string;
+}
+
+export interface AdminContentListResult {
+	posts: AdminContentPost[];
+	revision: AdminContentRevision;
+	limits: {
+		maxOperations: number;
+	};
+}
+
+export type AdminContentCommitOperation =
+	| {
+			op: "save";
+			post: AdminContentPost;
+			expectedSha?: string;
+	  }
+	| {
+			op: "trash";
+			id: string;
+			expectedSha?: string;
+	  }
+	| {
+			op: "restore";
+			id: string;
+			expectedSha?: string;
+			slug?: string;
+	  }
+	| {
+			op: "delete";
+			id: string;
+			expectedSha?: string;
+			confirm: true;
+	  }
+	| {
+			op: "taxonomy";
+			taxonomy: "category" | "tag";
+			mode: "rename" | "merge" | "delete";
+			from: string;
+			to?: string;
+	  };
+
+export interface AdminContentCommitInput {
+	baseHeadSha: string;
+	message?: string;
+	operations: AdminContentCommitOperation[];
+}
+
+export interface AdminContentCommitResult {
+	commit: {
+		sha: string;
+		url: string | null;
+	} | null;
+	posts: AdminContentPost[];
+	revision: AdminContentRevision;
+}
 
 export interface AdminContentOverview {
 	articles: number;
@@ -414,5 +510,34 @@ export function getAdminAuditLog(
 		"audit-list",
 		payload,
 		options.signal,
+	);
+}
+
+export function getAdminContent(
+	accessToken: string,
+	signal?: AbortSignal,
+): Promise<AdminContentListResult> {
+	return requestAdmin<AdminContentListResult>(
+		accessToken,
+		"content-list",
+		{},
+		signal,
+	);
+}
+
+export function commitAdminContent(
+	accessToken: string,
+	input: AdminContentCommitInput,
+	signal?: AbortSignal,
+): Promise<AdminContentCommitResult> {
+	return requestAdmin<AdminContentCommitResult>(
+		accessToken,
+		"content-commit",
+		{
+			baseHeadSha: input.baseHeadSha,
+			...(input.message?.trim() ? { message: input.message.trim() } : {}),
+			operations: input.operations,
+		},
+		signal,
 	);
 }

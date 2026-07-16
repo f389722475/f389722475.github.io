@@ -1,7 +1,6 @@
 ---
 import path from "node:path";
 
-import ArticleEngagement from "@components/features/posts/ArticleEngagement.svelte";
 import {
 	LastModified,
 	PostMeta,
@@ -10,11 +9,12 @@ import {
 	RelatedPosts,
 	ShareCard,
 } from "@components/features/posts";
+import ArticleEngagement from "@components/features/posts/ArticleEngagement.svelte";
 import { ReadingTime, WordCount } from "@components/features/posts/atoms";
 import License from "@components/misc/License.astro";
 import Markdown from "@components/misc/Markdown.astro";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getRelatedPosts, getSortedPosts } from "@utils/content-utils";
+import { getRelatedPosts, getRoutablePosts } from "@utils/content-utils";
 import { hasCustomPermalink, initPostIdMap } from "@utils/permalink-utils";
 import { getFileDirFromPath, removeFileExtension } from "@utils/url-utils";
 import type { CollectionEntry } from "astro:content";
@@ -33,7 +33,7 @@ import { profileConfig, siteConfig } from "../../config";
 import { formatDateToYYYYMMDD } from "../../utils/date-utils";
 
 export async function getStaticPaths() {
-	const blogEntries = await getSortedPosts();
+	const blogEntries = await getRoutablePosts();
 
 	// 初始化文章 ID 映射（用于 %post_id% 占位符）
 	initPostIdMap(blogEntries);
@@ -197,6 +197,7 @@ const jsonLd = {
 	setOGTypeArticle={true}
 	postSlug={entry.id}
 	headings={headings}
+	noIndex={entry.data.hidden}
 >
 	<script
 		is:inline
@@ -213,6 +214,7 @@ const jsonLd = {
 	>
 		<div
 			id="post-container"
+			data-pagefind-ignore={entry.data.hidden ? true : undefined}
 			class:list={[
 				"card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full ",
 				{},

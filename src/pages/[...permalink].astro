@@ -7,19 +7,19 @@
  * 例如：permalink: "custom-page" => /custom-page/
  */
 import Image from "@components/atoms/Image/Image.astro";
-import ArticleEngagement from "@components/features/posts/ArticleEngagement.svelte";
 import PasswordProtection from "@components/features/auth/PasswordProtection.astro";
 import {
 	LastModified,
 	PostMeta,
 	PostNavigation,
 } from "@components/features/posts";
+import ArticleEngagement from "@components/features/posts/ArticleEngagement.svelte";
 import License from "@components/misc/License.astro";
 import Markdown from "@components/misc/Markdown.astro";
 import I18nKey from "@i18n/i18nKey";
 import { i18n } from "@i18n/translation";
 import MainGridLayout from "@layouts/MainGridLayout.astro";
-import { getSortedPosts } from "@utils/content-utils";
+import { getRoutablePosts } from "@utils/content-utils";
 import {
 	generatePermalinkSlug,
 	hasCustomPermalink,
@@ -38,7 +38,7 @@ import { profileConfig, siteConfig } from "../config";
 import { formatDateToYYYYMMDD } from "../utils/date-utils";
 
 export async function getStaticPaths() {
-	const blogEntries = await getSortedPosts();
+	const blogEntries = await getRoutablePosts();
 
 	// 初始化文章 ID 映射
 	initPostIdMap(blogEntries);
@@ -120,6 +120,7 @@ const jsonLd = {
 	setOGTypeArticle={true}
 	postSlug={entry.id}
 	headings={headings}
+	noIndex={entry.data.hidden}
 >
 	<script
 		is:inline
@@ -135,6 +136,7 @@ const jsonLd = {
 	>
 		<div
 			id="post-container"
+			data-pagefind-ignore={entry.data.hidden ? true : undefined}
 			class:list={[
 				"card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full ",
 				{},

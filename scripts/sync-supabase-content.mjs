@@ -290,7 +290,12 @@ for (const filePath of postFiles) {
 		cover_object_path: cover?.object_path ?? null,
 		tags: normalizeTags(data.tags),
 		category: data.category ? String(data.category) : null,
-		status: data.draft === true ? "draft" : "published",
+		status:
+			data.trashed === true
+				? "archived"
+				: data.draft === true
+					? "draft"
+					: "published",
 		comment_enabled: data.comment !== false,
 		published_at: publishedAt.toISOString(),
 		metadata: {
@@ -298,6 +303,14 @@ for (const filePath of postFiles) {
 				.relative(rootDir, filePath)
 				.replaceAll(path.sep, "/"),
 			encrypted,
+			hidden: data.hidden === true,
+			trashed: data.trashed === true,
+			pinned: data.pinned === true,
+			priority:
+				typeof data.priority === "number" &&
+				Number.isFinite(data.priority)
+					? data.priority
+					: null,
 			media,
 		},
 	});
@@ -310,7 +323,9 @@ if (!Array.isArray(diaryItems)) {
 
 for (const item of diaryItems) {
 	if (!item || typeof item !== "object") {
-		throw new Error(`${path.relative(rootDir, diaryPath)} 包含无效日记条目`);
+		throw new Error(
+			`${path.relative(rootDir, diaryPath)} 包含无效日记条目`,
+		);
 	}
 	const id = String(item.id ?? "").trim();
 	const content = String(item.content ?? "").trim();
@@ -361,8 +376,14 @@ for (const item of diaryItems) {
 		comment_enabled: item.comment !== false,
 		published_at: publishedAt.toISOString(),
 		metadata: {
-			source_file: path.relative(rootDir, diaryPath).replaceAll(path.sep, "/"),
+			source_file: path
+				.relative(rootDir, diaryPath)
+				.replaceAll(path.sep, "/"),
 			diary_id: item.id,
+			hidden: false,
+			trashed: false,
+			pinned: false,
+			priority: null,
 			location: item.location ? String(item.location) : null,
 			mood: item.mood ? String(item.mood) : null,
 			media,
@@ -384,6 +405,55 @@ if (!dryRun) {
 			body: JSON.stringify(records),
 		},
 	);
+
+	const existingResponse = await request(
+		`${supabaseUrl}/rest/v1/content_entries?select=post_key,status,metadata&limit=10000`,
+		{
+			method: "GET",
+			headers: {
+				apikey: secretKey,
+				Accept: "application/json",
+				"User-Agent": "mizuki-supabase-content-sync/1.0",
+			},
+		},
+	);
+	const existingRecords = await existingResponse.json();
+	const currentKeys = new Set(records.map((record) => record.post_key));
+	const missingKeys = Array.isArray(existingRecords)
+		? existingRecords
+				.filter((record) => {
+					const sourceFile = record?.metadata?.source_file;
+					const managed =
+						typeof sourceFile === "string" &&
+						(sourceFile.startsWith("src/content/posts/") ||
+							sourceFile === "src/data/diary.json");
+					return (
+						managed &&
+						record.status !== "archived" &&
+						typeof record.post_key === "string" &&
+						!currentKeys.has(record.post_key)
+					);
+				})
+				.map((record) => record.post_key)
+		: [];
+
+	for (const postKey of missingKeys) {
+		await request(
+			`${supabaseUrl}/rest/v1/content_entries?post_key=eq.${encodeURIComponent(
+				postKey,
+			)}`,
+			{
+				method: "PATCH",
+				headers: {
+					apikey: secretKey,
+					"Content-Type": "application/json",
+					Prefer: "return=minimal",
+					"User-Agent": "mizuki-supabase-content-sync/1.0",
+				},
+				body: JSON.stringify({ status: "archived" }),
+			},
+		);
+	}
 }
 
 console.log(

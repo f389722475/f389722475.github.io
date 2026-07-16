@@ -2,10 +2,10 @@ import * as fs from "node:fs";
 
 import type { APIContext, GetStaticPaths } from "astro";
 import type { CollectionEntry } from "astro:content";
-import { getCollection } from "astro:content";
 import satori from "satori";
 import sharp from "sharp";
 
+import { getRoutablePosts } from "@/utils/content-utils";
 import { removeFileExtension } from "@/utils/url-utils";
 
 import { profileConfig, siteConfig } from "../../config";
@@ -26,8 +26,7 @@ export const getStaticPaths: GetStaticPaths = async () => {
 		return [];
 	}
 
-	const allPosts = await getCollection("posts");
-	const publishedPosts = allPosts.filter((post) => !post.data.draft);
+	const publishedPosts = await getRoutablePosts();
 
 	return publishedPosts.map((post) => {
 		// 将 id 转换为 slug（移除扩展名）以匹配路由参数

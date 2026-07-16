@@ -34,6 +34,8 @@ interface Props {
 	postSlug?: string;
 	headings?: MarkdownHeading[];
 	noIndex?: boolean;
+	wideContent?: boolean;
+	hideFloatingControls?: boolean;
 }
 
 // 获取 banner 图片
@@ -54,6 +56,8 @@ const {
 	postSlug,
 	headings = [],
 	noIndex = false,
+	wideContent = false,
+	hideFloatingControls = false,
 } = Astro.props;
 const hasBannerCredit = siteConfig.banner.credit.enable;
 const hasBannerLink = !!siteConfig.banner.credit.url;
@@ -86,6 +90,14 @@ const {
 
 const { hasRightSidebarComponents, hasMobileDrawerComponents } =
 	sidebarPresence;
+const effectiveGridCols = wideContent ? "grid-cols-1" : gridCols;
+const effectiveMainContentClass = wideContent
+	? "col-span-full min-w-0"
+	: mainContentClass;
+const showLeftSidebar =
+	!wideContent &&
+	(mobileShowSidebar || tabletShowSidebar || desktopShowSidebar);
+const showRightSidebar = !wideContent && hasRightSidebarComponents;
 
 // 半透明效果
 const shouldEnable = shouldEnableTransparency(
@@ -153,7 +165,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 		<div class="relative max-w-(--page-width) mx-auto pointer-events-auto">
 			<div
 				id="main-grid"
-				class={`transition duration-700 w-full left-0 right-0 grid ${gridCols} grid-rows-none md:grid-rows-[auto] mx-auto gap-4 px-2 md:px-4 ${!mobileShowSidebar || !hasMobileDrawerComponents ? "mobile-no-sidebar" : ""} ${hasRightSidebarComponents ? "mobile-both-sidebar" : ""}`}
+				class={`transition duration-700 w-full left-0 right-0 grid ${effectiveGridCols} grid-rows-none md:grid-rows-[auto] mx-auto gap-4 px-2 md:px-4 ${wideContent || !mobileShowSidebar || !hasMobileDrawerComponents ? "mobile-no-sidebar" : ""} ${showRightSidebar ? "mobile-both-sidebar" : ""}`}
 				data-layout-mode={defaultPostListLayout}
 			>
 				<!-- Banner image credit -->
@@ -198,9 +210,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 				{/* 侧边栏和主内容区域容器 */}
 				<div class="contents">
 					{
-						(mobileShowSidebar ||
-							tabletShowSidebar ||
-							desktopShowSidebar) && (
+						showLeftSidebar && (
 							<SideBar
 								class={`${sidebarClass} ${transparentClass}`}
 								headings={headings}
@@ -209,7 +219,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 					}
 
 					{
-						hasRightSidebarComponents && (
+						showRightSidebar && (
 							<div
 								class={`right-sidebar-container ${rightSidebarClass} ${transparentClass}`}
 							>
@@ -221,7 +231,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 
 				<main
 					id="swup-container"
-					class={`${mainContentClass} transition-main`}
+					class={`${effectiveMainContentClass} transition-main`}
 				>
 					<div
 						id="content-wrapper"
@@ -245,7 +255,7 @@ const defaultPostListLayout = siteConfig.postListLayout?.defaultMode || "list";
 				</div>
 			</div>
 
-			<FloatingControls headings={headings} />
+			{!hideFloatingControls && <FloatingControls headings={headings} />}
 		</div>
 	</div>
 

@@ -5,6 +5,13 @@ import {
 	type UserIdentity,
 } from "npm:@supabase/supabase-js@2.95.0";
 
+import {
+	ContentApiError,
+	contentCommitAction,
+	contentGetAction,
+	contentListAction,
+} from "./content-github.ts";
+
 type JsonObject = Record<string, unknown>;
 type AdminAction =
 	| "me"
@@ -12,6 +19,9 @@ type AdminAction =
 	| "comments-list"
 	| "comment-moderate"
 	| "audit-list"
+	| "content-list"
+	| "content-get"
+	| "content-commit"
 	| "probe";
 type ServiceName = "site" | "blog-api" | "database";
 type HealthStatus = "up" | "degraded" | "down";
@@ -56,7 +66,7 @@ interface MonitoringWindow {
 	ready: boolean;
 }
 
-const MAX_BODY_BYTES = 32 * 1024;
+const MAX_BODY_BYTES = 2 * 1024 * 1024;
 const MAX_METRICS_BYTES = 2 * 1024 * 1024;
 const HEALTH_HISTORY_PAGE_SIZE = 1000;
 const MONITOR_INTERVAL_MINUTES = 10;
@@ -75,6 +85,9 @@ const ACTIONS = new Set<AdminAction>([
 	"comments-list",
 	"comment-moderate",
 	"audit-list",
+	"content-list",
+	"content-get",
+	"content-commit",
 	"probe",
 ]);
 const COMMENT_STATUSES = new Set([
@@ -89,12 +102,19 @@ const MODERATION_DECISIONS = new Set(["approve", "reject", "spam", "delete"]);
 class ApiError extends Error {
 	status: number;
 	code: string;
+	details?: JsonObject;
 
-	constructor(status: number, code: string, message: string) {
+	constructor(
+		status: number,
+		code: string,
+		message: string,
+		details?: JsonObject,
+	) {
 		super(message);
 		this.name = "ApiError";
 		this.status = status;
 		this.code = code;
+		this.details = details;
 	}
 }
 
@@ -253,7 +273,11 @@ function success(origin: string | null, data: JsonObject): Response {
 function failure(origin: string | null, error: ApiError): Response {
 	return jsonResponse(origin, error.status, {
 		ok: false,
-		error: { code: error.code, message: error.message },
+		error: {
+			code: error.code,
+			message: error.message,
+			...(error.details ? { details: error.details } : {}),
+		},
 	});
 }
 
@@ -358,13 +382,21 @@ function bearerToken(request: Request): string {
 }
 
 function configuredAdminIds(): Set<string> {
-	const raw = Deno.env.get("ADMIN_GITHUB_IDS")?.trim() || "20443093";
-	return new Set(
+	const raw = Deno.env.get("ADMIN_GITHUB_IDS")?.trim() ?? "";
+	const ids = new Set(
 		raw
 			.split(",")
 			.map((id) => id.trim())
 			.filter(Boolean),
 	);
+	if (ids.size === 0) {
+		throw new ApiError(
+			503,
+			"ADMIN_NOT_CONFIGURED",
+			"Administrator access is not configured.",
+		);
+	}
+	return ids;
 }
 
 function providerId(identity: UserIdentity): string | null {
@@ -1475,6 +1507,18 @@ Deno.serve(async (request: Request) => {
 			case "audit-list":
 				data = await auditListAction(body);
 				break;
+			case "content-list":
+				data = await contentListAction();
+				break;
+			case "content-get":
+				data = await contentGetAction(body);
+				break;
+			case "content-commit":
+				data = await contentCommitAction(body, {
+					userId: admin.user.id,
+					githubId: admin.githubId,
+				});
+				break;
 			default:
 				throw new ApiError(
 					400,
@@ -1485,6 +1529,17 @@ Deno.serve(async (request: Request) => {
 		return success(origin, data);
 	} catch (error) {
 		if (error instanceof ApiError) return failure(origin, error);
+		if (error instanceof ContentApiError) {
+			return failure(
+				origin,
+				new ApiError(
+					error.status,
+					error.code,
+					error.message,
+					error.details,
+				),
+			);
+		}
 		console.error("[blog-admin-api] unexpected internal error");
 		return failure(
 			origin,

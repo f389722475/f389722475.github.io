@@ -4,13 +4,40 @@ import { initPostIdMap } from "@utils/permalink-utils";
 import { getCategoryUrl, getPostUrl } from "@utils/url-utils";
 import { type CollectionEntry, getCollection } from "astro:content";
 
-// // Retrieve posts and sort them by publication date
-async function getRawSortedPosts() {
-	const allBlogPosts = await getCollection("posts", ({ data }) => {
-		return import.meta.env.PROD ? data.draft !== true : true;
-	});
+type PostEntry = CollectionEntry<"posts">;
+type PostData = PostEntry["data"];
 
-	const sorted = allBlogPosts.sort((a, b) => {
+/**
+ * Routable posts get an article page. Trashed, draft and not-yet-published
+ * posts never get a production route; DEV keeps all non-trashed posts
+ * available for author preview.
+ */
+export function isPostRoutable(
+	data: Pick<PostData, "draft" | "published" | "trashed">,
+	production = import.meta.env.PROD,
+	now = Date.now(),
+): boolean {
+	return (
+		data.trashed !== true &&
+		(!production ||
+			(data.draft !== true && data.published.getTime() <= now))
+	);
+}
+
+/**
+ * Discoverable posts may appear in public lists, feeds, search metadata,
+ * calendars, statistics, navigation and recommendations.
+ */
+export function isPostDiscoverable(
+	data: Pick<PostData, "draft" | "hidden" | "published" | "trashed">,
+	production = import.meta.env.PROD,
+	now = Date.now(),
+): boolean {
+	return isPostRoutable(data, production, now) && data.hidden !== true;
+}
+
+function sortPosts(posts: PostEntry[]): PostEntry[] {
+	return posts.sort((a, b) => {
 		// 首先按置顶状态排序，置顶文章在前
 		if (a.data.pinned && !b.data.pinned) {
 			return -1;
@@ -39,22 +66,67 @@ async function getRawSortedPosts() {
 		const dateB = new Date(b.data.published);
 		return dateA > dateB ? -1 : 1;
 	});
-	return sorted;
+}
+
+async function getRawSortedPosts(
+	predicate: (data: PostData) => boolean,
+): Promise<PostEntry[]> {
+	const allBlogPosts = await getCollection("posts", ({ data }) =>
+		predicate(data),
+	);
+	return sortPosts(allBlogPosts);
+}
+
+function assignPublicPostNavigation(posts: PostEntry[]): PostEntry[] {
+	for (const post of posts) {
+		post.data.prevSlug = "";
+		post.data.prevTitle = "";
+		post.data.nextSlug = "";
+		post.data.nextTitle = "";
+	}
+
+	for (let i = 1; i < posts.length; i++) {
+		posts[i].data.nextSlug = posts[i - 1].id;
+		posts[i].data.nextTitle = posts[i - 1].data.title;
+	}
+	for (let i = 0; i < posts.length - 1; i++) {
+		posts[i].data.prevSlug = posts[i + 1].id;
+		posts[i].data.prevTitle = posts[i + 1].data.title;
+	}
+
+	return posts;
 }
 
 export async function getSortedPosts() {
-	const sorted = await getRawSortedPosts();
+	const routable = await getRawSortedPosts((data) => isPostRoutable(data));
+	const sorted = routable.filter((post) => isPostDiscoverable(post.data));
 
-	for (let i = 1; i < sorted.length; i++) {
-		sorted[i].data.nextSlug = sorted[i - 1].id;
-		sorted[i].data.nextTitle = sorted[i - 1].data.title;
-	}
-	for (let i = 0; i < sorted.length - 1; i++) {
-		sorted[i].data.prevSlug = sorted[i + 1].id;
-		sorted[i].data.prevTitle = sorted[i + 1].data.title;
+	initPostIdMap(routable);
+	return assignPublicPostNavigation(sorted);
+}
+
+/**
+ * Return every post that needs an article route, including hidden posts.
+ * Public previous/next links are assigned only between discoverable posts.
+ */
+export async function getRoutablePosts(): Promise<PostEntry[]> {
+	const routable = await getRawSortedPosts((data) => isPostRoutable(data));
+	const discoverable = routable.filter((post) =>
+		isPostDiscoverable(post.data),
+	);
+
+	initPostIdMap(routable);
+	assignPublicPostNavigation(discoverable);
+	for (const post of routable) {
+		if (post.data.hidden) {
+			post.data.prevSlug = "";
+			post.data.prevTitle = "";
+			post.data.nextSlug = "";
+			post.data.nextTitle = "";
+		}
 	}
 
-	return sorted;
+	return routable;
 }
 export interface PostForList {
 	id: string;
@@ -62,10 +134,7 @@ export interface PostForList {
 	url?: string; // 预计算的文章 URL
 }
 export async function getSortedPostsList(): Promise<PostForList[]> {
-	const sortedFullPosts = await getRawSortedPosts();
-
-	// 初始化文章 ID 映射（用于 permalink 功能）
-	initPostIdMap(sortedFullPosts);
+	const sortedFullPosts = await getSortedPosts();
 
 	// delete post.body，并预计算 URL
 	const sortedPostsList = sortedFullPosts.map((post) => ({
@@ -82,9 +151,9 @@ export interface Tag {
 }
 
 export async function getTagList(): Promise<Tag[]> {
-	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
-		return import.meta.env.PROD ? data.draft !== true : true;
-	});
+	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) =>
+		isPostDiscoverable(data),
+	);
 
 	const countMap: Record<string, number> = {};
 	allBlogPosts.forEach((post: { data: { tags: string[] } }) => {
@@ -111,9 +180,9 @@ export interface Category {
 }
 
 export async function getCategoryList(): Promise<Category[]> {
-	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) => {
-		return import.meta.env.PROD ? data.draft !== true : true;
-	});
+	const allBlogPosts = await getCollection<"posts">("posts", ({ data }) =>
+		isPostDiscoverable(data),
+	);
 	const count: Record<string, number> = {};
 	allBlogPosts.forEach((post: { data: { category: string | null } }) => {
 		if (!post.data.category) {
@@ -217,9 +286,9 @@ export async function getRelatedPosts(
 	currentPost: CollectionEntry<"posts">,
 	maxCount = 5,
 ): Promise<PostForList[]> {
-	const allPosts = await getCollection<"posts">("posts", ({ data }) => {
-		return import.meta.env.PROD ? data.draft !== true : true;
-	});
+	const allPosts = await getCollection<"posts">("posts", ({ data }) =>
+		isPostDiscoverable(data),
+	);
 
 	// 排除自身和加密文章
 	const candidates = allPosts.filter(
