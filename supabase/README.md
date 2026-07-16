@@ -23,6 +23,9 @@ is committed here.
 - `migrations/202607150002_admin_dashboard.sql`
   - private moderation audit trail and 30-day service health samples
   - atomic comment moderation and a least-privilege dashboard RPC
+- `migrations/202607160001_content_visibility.sql`
+  - prevents anonymous REST enumeration of hidden or trashed content
+  - applies the same visibility boundary to public statistics and comments
 - `functions/blog-admin-api/index.ts`
   - GitHub-identity-gated moderation, operations dashboard, and health probes
   - allow-listed Supabase Metrics API fields only; raw metrics never reach the browser
@@ -45,11 +48,11 @@ limiter is unavailable.
 
 Public roles can read only:
 
-- `content_entries` rows whose status is `published` and publication time has
-  arrived
-- approved comments attached to published content (the `visitor_hash` column is
-  not granted to public roles)
-- aggregate statistics for published content
+- visible `content_entries` rows whose status is `published` and publication
+  time has arrived
+- approved comments attached to visible published content (the `visitor_hash`
+  column is not granted to public roles)
+- aggregate statistics for visible published content
 - files in the `blog-media` bucket
 
 Comments are always inserted as `pending`. Likes, events, moderation, and draft
@@ -65,6 +68,30 @@ validated again by `auth.getUser()` inside `blog-admin-api`, then matched agains
 the immutable GitHub numeric provider ID in `ADMIN_GITHUB_IDS`. A hidden navbar
 item is only a presentation detail; this server-side provider-ID check is the
 actual authorization boundary.
+
+Article Markdown remains GitHub's source of truth. Authenticated content actions
+are sent to `blog-admin-api`; the Edge Function holds a repository-scoped GitHub
+token and creates commits through the Git Data API. The browser receives article
+data and Git blob/revision SHAs, but it never receives the GitHub token. Every
+write uses the branch head SHA as an optimistic lock, so a stale administrator
+tab cannot silently overwrite a newer commit.
+
+The content API supports:
+
+- `content-list`: returns all active and trashed Markdown, including bodies and
+  encrypted-post passwords, only after administrator authentication
+- `content-get`: returns one active or trashed Markdown entry
+- `content-commit`: atomically creates one Git commit containing up to 50
+  `save`, `trash`, `restore`, `delete`, or `taxonomy` operations
+
+Soft deletion moves Markdown from `src/content/posts` to `.trash/posts` in the
+same commit. Permanent deletion is accepted only for an item that was already
+persisted in trash before the current request, requires `confirm: true`, and
+therefore cannot be combined with the initial trash operation in one commit.
+Taxonomy rename, merge, and delete operations rewrite affected Frontmatter in
+one Git commit. GitHub history remains the authoritative recovery and audit
+trail; a redacted commit summary is also added to `admin_audit_log` when that
+database is available.
 
 ## Deploy
 
@@ -90,10 +117,22 @@ long, random, independently rotatable HMAC secret:
 ```powershell
 supabase secrets set ALLOWED_ORIGINS="https://f389722475.github.io,http://localhost:4321"
 supabase secrets set VISITOR_HASH_SECRET="<LONG_RANDOM_VALUE>"
-supabase secrets set ADMIN_GITHUB_IDS="<IMMUTABLE_GITHUB_NUMERIC_ID>"
+supabase secrets set ADMIN_GITHUB_IDS="20443093"
+supabase secrets set GITHUB_CONTENT_TOKEN="<FINE_GRAINED_CONTENTS_WRITE_TOKEN>"
+supabase secrets set GITHUB_CONTENT_OWNER="f389722475"
+supabase secrets set GITHUB_CONTENT_REPO="f389722475.github.io"
+supabase secrets set GITHUB_CONTENT_BRANCH="main"
+supabase secrets set GITHUB_CONTENT_ROOT="src/content/posts"
+supabase secrets set GITHUB_CONTENT_TRASH_ROOT=".trash/posts"
 supabase secrets set OPS_MONITOR_TOKEN="<INDEPENDENT_LONG_RANDOM_VALUE>"
 supabase secrets set SITE_URL="https://f389722475.github.io"
 ```
+
+`GITHUB_CONTENT_TOKEN` should be a fine-grained token restricted to the Pages
+repository with only `Contents: Read and write`. Do not store it in GitHub Pages
+variables, Astro `PUBLIC_` variables, localStorage, or browser code. If the target
+branch requires pull requests, either permit this trusted token to update the
+branch or configure a separate publishing branch and merge workflow.
 
 Store the same monitor token as the masked GitHub repository secret
 `OPS_MONITOR_TOKEN`. `.github/workflows/ops-monitor.yml` calls the protected
@@ -118,6 +157,63 @@ supabase db reset
 supabase functions serve blog-api --no-verify-jwt --env-file <IGNORED_ENV_FILE>
 ```
 
+### Administrator content request contract
+
+All requests use `POST /functions/v1/blog-admin-api`, the browser's Supabase
+access token as `Authorization: Bearer <ACCESS_TOKEN>`, and an allowed `Origin`.
+
+```json
+{ "action": "content-list" }
+```
+
+The response contains `posts` and a `revision` object. Each post includes
+`id`, `sha`, `slug`, all supported Frontmatter fields, `body`, and status
+metadata. `id` is the path relative to the configured content root and includes
+`.md`; `slug` is the desired relative path without the extension.
+
+```json
+{
+  "action": "content-commit",
+  "baseHeadSha": "<revision.headSha>",
+  "message": "publish article",
+  "operations": [
+    {
+      "op": "save",
+      "expectedSha": "<post.sha>",
+      "post": {
+        "id": "guide/example.md",
+        "slug": "guide/example",
+        "title": "Example",
+        "body": "# Example",
+        "status": "published",
+        "publishedAt": "2026-07-16T12:00:00.000Z",
+        "tags": [],
+        "kind": "article"
+      }
+    }
+  ]
+}
+```
+
+The browser should send the complete post shape returned by `content-list`;
+fields omitted in the shortened example use validated defaults. A new post may
+omit `id`, `sha`, and `expectedSha`. Editing should include `expectedSha`.
+Changing `slug` atomically moves the Markdown file.
+
+Other operation shapes are:
+
+```json
+{ "op": "trash", "id": "guide/example.md", "expectedSha": "<post.sha>" }
+{ "op": "restore", "id": "guide/example.md", "expectedSha": "<post.sha>" }
+{ "op": "delete", "id": "guide/example.md", "expectedSha": "<post.sha>", "confirm": true }
+{ "op": "taxonomy", "taxonomy": "tag", "mode": "merge", "from": "old", "to": "new" }
+```
+
+On success, `content-commit` returns the new commit and a refreshed `posts`
+array. A `409 CONTENT_REVISION_CONFLICT` response includes the current branch
+head and requires reloading before retrying. Do not automatically retry a write
+with a replaced `baseHeadSha`; the administrator must review the newer content.
+
 ## Seed or synchronize content
 
 Interactions require a matching, published `content_entries` row. Anonymous
@@ -139,10 +235,16 @@ local media references without sending any network request.
 It requires server-only `SUPABASE_URL` and `SUPABASE_SECRET_KEY`. Encrypted
 posts keep their public metadata and explicitly configured public cover, but
 upload an empty Markdown body and do not scan or expose body media mappings, so
-database reads cannot bypass page encryption. The command never deletes remote
-content. The GitHub Pages deployment workflow runs this sync only after the
-static build has succeeded; its server key is stored only as the masked
-repository secret
+database reads cannot bypass page encryption. Hidden articles are marked in
+metadata and omitted from the public content list while their direct-link
+interaction lookup remains available. The sync also mirrors `pinned`,
+`priority`, and `trashed` metadata: public API lists use the same pinned-first
+ordering as the static site, while an active Markdown file explicitly marked
+`trashed: true` is archived instead of published. When a previously managed
+Markdown or diary entry disappears from the source tree, the sync archives its
+database record instead of hard-deleting comments and statistics. The GitHub
+Pages deployment workflow runs this sync only after the static build has
+succeeded; its server key is stored only as the masked repository secret
 `SUPABASE_SECRET_KEY`. The step is enabled only when the repository variable
 `SUPABASE_BACKEND_READY` is `true`, so an undeployed backend cannot break a
 static Pages deployment.

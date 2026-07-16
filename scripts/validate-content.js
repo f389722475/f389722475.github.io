@@ -118,6 +118,8 @@ function validatePost(filePath) {
 	const published = readScalar(frontmatter, "published");
 	const updated = readScalar(frontmatter, "updated");
 	const draft = readScalar(frontmatter, "draft");
+	const hidden = readScalar(frontmatter, "hidden");
+	const trashed = readScalar(frontmatter, "trashed");
 	const image = readScalar(frontmatter, "image");
 
 	if (!title) {
@@ -138,10 +140,16 @@ function validatePost(filePath) {
 		);
 	}
 
-	if (draft !== undefined && !/^(?:true|false)$/i.test(draft)) {
-		errors.push(
-			`${relativeToRoot(filePath)}：draft 只能是 true 或 false。`,
-		);
+	for (const [field, value] of Object.entries({
+		draft,
+		hidden,
+		trashed,
+	})) {
+		if (value !== undefined && !/^(?:true|false)$/i.test(value)) {
+			errors.push(
+				`${relativeToRoot(filePath)}：${field} 只能是 true 或 false。`,
+			);
+		}
 	}
 
 	if (image) validateLocalImage(filePath, image, "Frontmatter image ");

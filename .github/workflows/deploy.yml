@@ -4,6 +4,10 @@ on:
     push:
         branches: [main, master]
     workflow_dispatch:
+    # Rebuild hourly so future-dated articles become public after their
+    # scheduled time even when no new commit is pushed.
+    schedule:
+        - cron: "17 * * * *"
 
 permissions:
     contents: read

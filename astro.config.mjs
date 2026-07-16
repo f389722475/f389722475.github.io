@@ -17,7 +17,8 @@ import remarkDirective from "remark-directive";
 import remarkMath from "remark-math";
 import remarkSectionize from "remark-sectionize";
 
-import { siteConfig } from "./src/config.ts";
+import { getHiddenPostRoutePaths } from "./scripts/content-route-visibility.mjs";
+import { permalinkConfig, siteConfig } from "./src/config.ts";
 import { pluginCustomCopyButton } from "./src/plugins/expressive-code/custom-copy-button.js";
 import { pluginLanguageBadge } from "./src/plugins/expressive-code/language-badge.ts";
 import { AdmonitionComponent } from "./src/plugins/rehype-component-admonition.mjs";
@@ -61,6 +62,21 @@ const inferredBasePath =
 const siteURL = process.env.SITE_URL?.trim() || inferredSiteURL;
 const basePath = normalizeBasePath(
 	process.env.BASE_PATH?.trim() || inferredBasePath,
+);
+const normalizeSitemapPath = (value) => {
+	const pathname = new URL(value, "https://mizuki.invalid").pathname.replace(
+		/\/+$/,
+		"",
+	);
+	return pathname || "/";
+};
+const hiddenPostPaths = new Set(
+	[
+		...getHiddenPostRoutePaths({
+			contentDirectory: new URL("./src/content/posts/", import.meta.url),
+			permalinkConfig,
+		}),
+	].map(normalizeSitemapPath),
 );
 
 // https://astro.build/config
@@ -150,9 +166,21 @@ export default defineConfig({
 			preprocess: vitePreprocess(),
 		}),
 		sitemap({
-			// 管理页是静态鉴权外壳，不应进入公开站点地图。
-			filter: (page) =>
-				!new URL(page).pathname.replace(/\/+$/, "").endsWith("/admin"),
+			// Admin and hidden direct-link pages stay out of the public sitemap.
+			filter: (page) => {
+				const pathname = new URL(page).pathname.replace(/\/+$/, "");
+				const baseRoot =
+					basePath === "/" ? "" : basePath.replace(/\/$/, "");
+				const relativePath =
+					baseRoot && pathname.startsWith(baseRoot)
+						? pathname.slice(baseRoot.length) || "/"
+						: pathname;
+				return (
+					relativePath !== "/admin" &&
+					!relativePath.startsWith("/admin/") &&
+					!hiddenPostPaths.has(normalizeSitemapPath(relativePath))
+				);
+			},
 		}),
 	],
 	markdown: {

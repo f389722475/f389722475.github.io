@@ -5,6 +5,13 @@
 
 	import {
 		AdminApiError,
+		type AdminAuditItem,
+		type AdminComment,
+		type AdminCommentCounts,
+		type AdminCommentFilter,
+		type AdminMe,
+		type AdminModerationDecision,
+		type AdminOverview,
 		getAdminAuditLog,
 		getAdminComments,
 		getAdminMe,
@@ -13,21 +20,15 @@
 		isAdminApiConfigured,
 		isSupabaseBrowserConfigured,
 		moderateAdminComment,
-		type AdminAuditItem,
-		type AdminComment,
-		type AdminCommentCounts,
-		type AdminCommentFilter,
-		type AdminMe,
-		type AdminModerationDecision,
-		type AdminOverview,
 	} from "@/lib/supabase";
 
+	import AdminContentStudio from "./content/AdminContentStudio.svelte";
 	import DonutGauge from "./DonutGauge.svelte";
 	import LatencyChart from "./LatencyChart.svelte";
 
 	type AuthState =
 		"loading" | "signed-out" | "checking" | "ready" | "denied" | "error";
-	type AdminTab = "operations" | "dashboard";
+	type AdminTab = "operations" | "dashboard" | "content";
 	type FeedbackKind = "success" | "error" | "info";
 
 	const EMPTY_COUNTS: AdminCommentCounts = {
@@ -484,6 +485,59 @@
 		}
 	}
 
+	async function refreshReadySession(nextSession: Session) {
+		if (
+			authState !== "ready" ||
+			!session ||
+			session.user.id !== nextSession.user.id
+		) {
+			await verifySession(nextSession);
+			return;
+		}
+
+		const version = ++authVersion;
+		activeController?.abort();
+		const controller = new AbortController();
+		activeController = controller;
+		session = nextSession;
+
+		try {
+			const identity = await getAdminMe(
+				nextSession.access_token,
+				controller.signal,
+			);
+			if (disposed || version !== authVersion) return;
+			if (!identity.isAdmin) {
+				throw new AdminApiError("此账号没有管理员权限。", 403);
+			}
+			me = identity;
+			await loadAll(nextSession.access_token);
+		} catch (error) {
+			if (
+				disposed ||
+				controller.signal.aborted ||
+				version !== authVersion
+			) {
+				return;
+			}
+			if (error instanceof AdminApiError && error.status === 403) {
+				authState = "denied";
+				authMessage = "当前 GitHub 账号不是本站管理员。";
+			} else if (error instanceof AdminApiError && error.status === 401) {
+				authState = "signed-out";
+				authMessage = "登录已过期，请重新授权。";
+			} else {
+				showFeedback(
+					`管理员身份后台复核暂时失败：${readableError(error)}`,
+					"error",
+					5200,
+				);
+			}
+		} finally {
+			if (activeController === controller) activeController = null;
+		}
+	}
+
 	function startAutoRefresh() {
 		if (refreshTimer) window.clearInterval(refreshTimer);
 		refreshTimer = window.setInterval(
@@ -606,8 +660,19 @@
 		}
 
 		const { data } = supabase.auth.onAuthStateChange(
-			(_event, nextSession) => {
-				window.setTimeout(() => void verifySession(nextSession), 0);
+			(event, nextSession) => {
+				const canKeepReadyShell =
+					event !== "SIGNED_OUT" &&
+					authState === "ready" &&
+					Boolean(nextSession?.access_token) &&
+					session?.user.id === nextSession?.user.id;
+				window.setTimeout(
+					() =>
+						void (canKeepReadyShell && nextSession
+							? refreshReadySession(nextSession)
+							: verifySession(nextSession)),
+					0,
+				);
 			},
 		);
 		authSubscription = data.subscription;
@@ -636,6 +701,7 @@
 
 <section
 	class="admin-shell card-base onload-animation"
+	class:content-active={authState === "ready" && activeTab === "content"}
 	aria-labelledby="admin-console-title"
 >
 	{#if authState !== "ready"}
@@ -784,6 +850,14 @@
 			>
 				<Icon icon="material-symbols:monitoring-rounded" />
 				<span>运行仪表盘</span>
+			</button>
+			<button
+				type="button"
+				class:active={activeTab === "content"}
+				on:click={() => (activeTab = "content")}
+			>
+				<Icon icon="material-symbols:edit-document-rounded" />
+				<span>内容管理</span>
 			</button>
 		</nav>
 
@@ -1067,7 +1141,7 @@
 					{/if}
 				</section>
 			</div>
-		{:else}
+		{:else if activeTab === "dashboard"}
 			<div class="tab-panel dashboard-panel">
 				<section
 					class="status-banner"
@@ -1518,6 +1592,13 @@
 				</p>
 			</div>
 		{/if}
+
+		<div class="tab-panel content-panel" hidden={activeTab !== "content"}>
+			<AdminContentStudio
+				embedded={true}
+				accessToken={session?.access_token ?? ""}
+			/>
+		</div>
 	{/if}
 </section>
 
@@ -1529,6 +1610,9 @@
 		min-height: 36rem;
 		overflow: hidden;
 		padding: 1.25rem;
+	}
+	.admin-shell.content-active {
+		overflow: visible;
 	}
 	.eyebrow {
 		margin: 0 0 0.2rem;
@@ -1839,6 +1923,7 @@
 	.console-tabs {
 		display: flex;
 		gap: 0.45rem;
+		overflow-x: auto;
 		padding: 0.35rem;
 		border-radius: 1rem;
 		background: color-mix(
@@ -1855,6 +1940,7 @@
 		justify-content: center;
 		gap: 0.5rem;
 		min-height: 2.8rem;
+		min-width: 8.5rem;
 		border-radius: 0.75rem;
 		background: transparent;
 		color: rgb(0 0 0 / 50%);
@@ -1900,6 +1986,9 @@
 	}
 	.tab-panel {
 		padding-top: 1rem;
+	}
+	.content-panel[hidden] {
+		display: none;
 	}
 	.kpi-grid {
 		display: grid;
