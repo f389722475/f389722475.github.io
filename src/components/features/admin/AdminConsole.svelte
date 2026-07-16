@@ -640,18 +640,26 @@
 >
 	{#if authState !== "ready"}
 		<div class="auth-gate">
+			<!--
+				红框动画结构：
+				1. auth-orbit：动画整体画布；
+				2. ring-one：外层实线轨道；
+				3. ring-two：内层虚线反向轨道；
+				4. auth-core：中间的盾牌方块。
+				具体尺寸、速度和偏移量请搜索下方 CSS 中的“红框动画手动校准区”。
+			-->
 			<div class="auth-orbit" aria-hidden="true">
+				<!-- 外层轨道及其蓝色粒子 -->
 				<div class="orbit-ring ring-one"></div>
+				<!-- 内层虚线轨道及其蓝色粒子 -->
 				<div class="orbit-ring ring-two"></div>
+				<!-- 中央盾牌方块 -->
 				<div class="auth-core">
 					<Icon icon="material-symbols:shield-person-rounded" />
 				</div>
 			</div>
 			<p class="eyebrow">仅限站长</p>
 			<h1 id="admin-console-title">管理员后台</h1>
-			<p class="auth-description">
-				评论审核、站点运维和 Supabase 运行状态仅向站长本人开放。
-			</p>
 
 			{#if authState === "loading" || authState === "checking"}
 				<div class="auth-status" role="status">
@@ -672,10 +680,6 @@
 							: "使用 GitHub 管理员账号登录"}</span
 					>
 				</button>
-				<p class="auth-hint">
-					不会申请仓库写入权限；后端会再次核验不可变 GitHub 身份。
-					<br />可将本页加入收藏夹，浏览器重启后仍可从这里重新登录。
-				</p>
 			{:else if authState === "denied"}
 				<div class="auth-alert denied" role="alert">
 					<Icon icon="material-symbols:lock" />
@@ -1533,79 +1537,121 @@
 		font-weight: 800;
 		letter-spacing: 0.16em;
 	}
+	/* 登录区域整体定位：这里会影响红框动画在整张卡片中的上下位置。 */
 	.auth-gate {
 		display: flex;
+		/* 登录区域的最低高度；数值越大，整体可用的垂直居中空间越大。 */
 		min-height: 34rem;
 		flex-direction: column;
 		align-items: center;
+		/* 当前为垂直居中；可改为 flex-start / flex-end 调整整体对齐方向。 */
 		justify-content: center;
+		/* 第一个数值控制上下留白，第二个数值控制左右留白。 */
 		padding: 2rem 1rem;
 		text-align: center;
 	}
 	.auth-gate h1 {
-		margin: 0.3rem 0 0;
+		/* 上方与“仅限站长”的距离为 0.3rem，下方与登录按钮的距离为 1.5rem。 */
+		margin: 0.3rem 0 1.5rem;
 		font-size: clamp(2rem, 6vw, 3.2rem);
 		color: rgb(0 0 0 / 86%);
 	}
-	.auth-description {
-		max-width: 32rem;
-		margin: 0.85rem auto 1.5rem;
-		color: rgb(0 0 0 / 50%);
-		line-height: 1.75;
-	}
+
+	/* ===== 红框动画手动校准区：开始 ===== */
+	/* 动画整体画布：优先在这里调整整组动画的尺寸和下方间距。 */
 	.auth-orbit {
+		/* 作为两条绝对定位轨道和中央方块的定位基准。 */
 		position: relative;
 		display: grid;
+		/* 整组动画宽度；需要等比缩放时应与下面的 height 一起修改。 */
 		width: 9rem;
+		/* 整组动画高度；通常与 width 保持相同以维持正圆轨道。 */
 		height: 9rem;
+		/* 将中央盾牌方块放在动画画布的几何中心。 */
 		place-items: center;
+		/* 动画底部到“仅限站长”文字之间的距离。 */
 		margin-bottom: 1.2rem;
 	}
+	/* 两条轨道共用的基础样式。 */
 	.orbit-ring {
+		/* 相对于 auth-orbit 进行绝对定位。 */
 		position: absolute;
+		/* 0 表示轨道贴满 9rem 画布；增大数值会让轨道整体向内缩。 */
 		inset: 0;
+		/* 轨道线宽、颜色强度和透明度。35% 越大，轨道颜色越明显。 */
 		border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+		/* 50% 让正方形轨道变成圆形。 */
 		border-radius: 50%;
+		/* 外轨道旋转速度：10s 越小转得越快；linear 保持匀速。 */
 		animation: spin 10s linear infinite;
 	}
+	/* 每条轨道上的蓝色粒子；粒子会随所属轨道一起旋转。 */
 	.orbit-ring::after {
 		position: absolute;
-		top: 0.45rem;
+		/*
+			粒子距离轨道顶边的垂直偏移；减小会更靠外，增大会更靠内。
+			手动校准后，-0.3rem 可让两个粒子正好与各自轨道对齐。
+		*/
+		top: -0.3rem;
+		/*
+			粒子的水平起点。50% 以粒子左边缘对准轨道中心线；
+			如需让粒子几何中心严格对齐正上方，可手动微调此百分比。
+		*/
 		left: 50%;
+		/* 粒子直径：宽高应保持一致。 */
 		width: 0.6rem;
 		height: 0.6rem;
 		border-radius: 50%;
+		/* 粒子本体颜色。 */
 		background: var(--primary);
+		/* 粒子外发光范围；1rem 越大，光晕越宽。 */
 		box-shadow: 0 0 1rem var(--primary);
 		content: "";
 	}
+	/* 内层虚线轨道的独立参数。 */
 	.ring-two {
+		/* 内轨道相对外轨道向内收缩的距离。 */
 		inset: 1rem;
+		/* 将内轨道改为虚线；删除此行即可恢复实线。 */
 		border-style: dashed;
+		/* 让内轨道与外轨道反向旋转。 */
 		animation-direction: reverse;
+		/* 内轨道旋转速度：7s 越小转得越快。 */
 		animation-duration: 7s;
 	}
+	/* 中央盾牌方块。 */
 	.auth-core {
 		display: grid;
+		/* 中央方块宽度。 */
 		width: 5.2rem;
+		/* 中央方块高度；通常与 width 一起修改。 */
 		height: 5.2rem;
 		place-items: center;
+		/* 方块圆角；数值越大越接近圆形。 */
 		border-radius: 1.6rem;
+		/* 渐变方向为 135deg，后两项分别是起始色和结束色。 */
 		background: linear-gradient(
 			135deg,
 			color-mix(in srgb, var(--primary) 92%, white),
 			#846bdc
 		);
 		color: white;
+		/* 中央方块阴影：依次为横向偏移、纵向偏移、模糊半径和颜色。 */
 		box-shadow: 0 1rem 2.5rem
 			color-mix(in srgb, var(--primary) 28%, transparent);
-		transform: rotate(-5deg);
+		/* 中央方块逆时针倾斜角度；改为 0deg 即完全摆正。 */
+		transform: rotate(0deg);
 	}
+	/* 盾牌图标自身的尺寸和角度。 */
 	.auth-core :global(svg) {
+		/* 盾牌图标宽度。 */
 		width: 2.7rem;
+		/* 盾牌图标高度。 */
 		height: 2.7rem;
-		transform: rotate(5deg);
+		/* 0deg，让盾牌图标保持竖直。 */
+		transform: rotate(0deg);
 	}
+	/* ===== 红框动画手动校准区：结束 ===== */
 	.github-login,
 	.secondary-button,
 	.icon-action,
@@ -1638,11 +1684,6 @@
 	.github-login :global(svg) {
 		width: 1.3rem;
 		height: 1.3rem;
-	}
-	.auth-hint {
-		margin: 0.8rem 0 0;
-		color: rgb(0 0 0 / 38%);
-		font-size: 0.72rem;
 	}
 	.auth-status,
 	.loading-block {
@@ -2608,9 +2649,7 @@
 	:global(.dark) .pie-ring strong {
 		color: rgb(255 255 255 / 88%);
 	}
-	:global(.dark) .auth-description,
 	:global(.dark) .auth-status,
-	:global(.dark) .auth-hint,
 	:global(.dark) .identity-block p:last-child,
 	:global(.dark) .sample-time,
 	:global(.dark) .section-heading span,
@@ -2657,8 +2696,10 @@
 		background: rgb(255 255 255 / 3.5%);
 		color: rgb(255 255 255 / 70%);
 	}
+	/* 轨道旋转关键帧；轨道和加载圆圈共用，旋转速度在各自 animation 中调整。 */
 	@keyframes spin {
 		to {
+			/* 一轮动画顺时针旋转 360 度。 */
 			transform: rotate(360deg);
 		}
 	}
@@ -2743,14 +2784,21 @@
 	}
 	@media (max-width: 520px) {
 		.auth-gate {
+			/* 手机端登录区域高度。 */
 			min-height: 30rem;
 		}
+		/* 手机端红框动画整体尺寸。 */
 		.auth-orbit {
+			/* 手机端动画宽度。 */
 			width: 7.5rem;
+			/* 手机端动画高度；应与宽度保持一致。 */
 			height: 7.5rem;
 		}
+		/* 手机端中央盾牌方块尺寸。 */
 		.auth-core {
+			/* 手机端方块宽度。 */
 			width: 4.5rem;
+			/* 手机端方块高度；应与宽度保持一致。 */
 			height: 4.5rem;
 		}
 		.console-tabs button {
