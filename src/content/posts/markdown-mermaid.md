@@ -1,12 +1,17 @@
 ---
 title: Markdown Mermaid 图表
-published: 2023-10-01
-pinned: false
+published: 2023-10-01T00:00:00.000Z
 description: 一个在 Markdown 博客文章中使用 Mermaid 的简单示例。
-tags: [Markdown, 博客, Mermaid]
+tags:
+  - Markdown
+  - 博客
+  - Mermaid
 category: 示例
 draft: false
+updated: 2026-07-17T04:50:34.335Z
+hidden: true
 ---
+
 # 在 Markdown 中使用 Mermaid 图表的完整指南
 
 本文演示如何在 Markdown 文档中使用 Mermaid 创建多种复杂图表，包括流程图、时序图、甘特图、类图和状态图。
