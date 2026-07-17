@@ -1,14 +1,18 @@
 ---
 title: Markdown 教程
-published: 2025-01-20
+published: 2025-01-20T00:00:00.000Z
 pinned: true
 description: 一个简单的 Markdown 博客文章示例。
-tags: [Markdown, 博客]
+tags:
+  - Markdown
+  - 博客
 category: 示例
-licenseName: "未授权"
+licenseName: 未授权
 author: emn178
-sourceLink: "https://github.com/emn178/markdown"
+sourceLink: https://github.com/emn178/markdown
 draft: false
+updated: 2026-07-17T04:50:06.234Z
+hidden: true
 ---
 
 # Markdown 教程
