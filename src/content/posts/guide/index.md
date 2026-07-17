@@ -1,11 +1,16 @@
 ---
 title: Mizuki 简明指南
-published: 2024-04-01
-description: "如何使用这个博客模板。"
-image: "./cover.webp"
-tags: ["Mizuki", "博客", "自定义"]
+published: 2024-04-01T00:00:00.000Z
+description: 如何使用这个博客模板。
+image: ./cover.webp
+tags:
+  - Mizuki
+  - 博客
+  - 自定义
 category: 指南
 draft: false
+updated: 2026-07-17T04:50:28.567Z
+hidden: true
 ---
 
 
