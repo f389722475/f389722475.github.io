@@ -1,9 +1,14 @@
 ---
 title: 草稿示例
-published: 2022-07-01
-tags: [Markdown, 博客, 演示]
+published: 2022-07-01T00:00:00.000Z
+tags:
+  - Markdown
+  - 博客
+  - 演示
 category: 示例
 draft: true
+updated: 2026-07-17T04:50:47.753Z
+trashedAt: 2026-07-17T04:50:47.753Z
 ---
 
 # 本文是一篇草稿
