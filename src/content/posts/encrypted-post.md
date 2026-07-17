@@ -1,14 +1,19 @@
 ---
 title: 加密文章
-published: 2024-01-15
+published: 2024-01-15T00:00:00.000Z
 description: 这是一篇用于测试页面加密功能的文章
 encrypted: true
 pinned: true
 password: "123456"
 passwordHint: "123456"
-alias: "encrypted-example"
-tags: ["测试", "加密"]
-category: "技术"
+alias: encrypted-example
+tags:
+  - 测试
+  - 加密
+category: 技术
+updated: 2026-07-17T04:50:16.973Z
+draft: false
+hidden: true
 ---
 
 这个博客模板使用 [Astro](https://astro.build/) 构建。本指南没有涉及的内容，可以在 [Astro 文档](https://docs.astro.build/)中查找答案。
