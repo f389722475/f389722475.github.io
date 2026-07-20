@@ -8,7 +8,8 @@ tags:
   - Mermaid
 category: 示例
 draft: false
-updated: 2026-07-20T02:28:59.055Z
+updated: 2026-07-20T02:44:30.884Z
+hidden: true
 ---
 
 # 在 Markdown 中使用 Mermaid 图表的完整指南
