@@ -1,7 +1,7 @@
 ---
 title: Markdown 扩展功能
 published: 2024-05-01T00:00:00.000Z
-updated: 2026-07-17T04:50:22.857Z
+updated: 2026-07-20T02:28:52.038Z
 description: 进一步了解 Mizuki 中的 Markdown 功能
 tags:
   - 演示
@@ -10,7 +10,6 @@ tags:
   - Mizuki
 category: 示例
 draft: false
-hidden: true
 ---
 
 ## GitHub 仓库卡片
